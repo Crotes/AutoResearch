@@ -53,6 +53,8 @@ PoC 已实现四类连接器（`adapters/sources/`）：arXiv Atom API、GitHub 
 
 隐藏下载、格式检测、正文提取、规范化、分块、内容哈希和证据定位。
 
+PoC 已实现于 `application/content/`：HTML/PDF/Markdown/纯文本检测（PDF 为 stdlib 最小提取，失败降级为 content 错误），结构感知分块产生稳定锚点（`<source_version_id>#chunk-<N>`，PDF 附页码），相同内容重复处理完全幂等；访问策略为 `metadata_only`/`controlled` 时正文不进入提取路径（ADR-0005 的结构性保证）。成果身份解析与人工 merge/split 纠错在 `application/identity.py`（ADR-0004）。
+
 ### ResearchLibrary 模块
 
 负责成果身份、来源版本、工件版本、审核记录、索引与派生失效。

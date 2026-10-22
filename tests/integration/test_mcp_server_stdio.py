@@ -65,6 +65,10 @@ class StdioClient:
         assert self._process.stdin is not None
         self._process.stdin.close()
         self._process.wait(timeout=10)
+        for stream in (self._process.stdout, self._process.stderr):
+            if stream is not None:
+                stream.close()
+        self._reader.join(timeout=10)
 
     @property
     def returncode(self) -> int | None:
