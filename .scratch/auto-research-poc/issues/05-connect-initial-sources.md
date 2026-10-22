@@ -1,7 +1,8 @@
 # 接入首批资料来源
 
 Type: task
-Status: ready-for-agent
+Status: claimed
+Owner: Kimi
 Blocked by: 01, 04
 
 ## 目标
