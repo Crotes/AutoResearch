@@ -11,6 +11,7 @@
 ## 运行约定
 
 - 一个 ResearchRun 对应一个 `pi --mode rpc` 子进程；原始协议记录全量写入 `.autoresearch/sessions/<run_id>/pi-events.jsonl`（审计附件，不进入 Git）。
+- `agent_settled` 只表示当前 Pi 工作回合结束；Application 工作流随后进入选源或终审检查点，只有人工审核决定可以推动 ResearchRun 完成。
 - Windows 上通过 `shutil.which("pi")` 解析 `pi.cmd`（CreateProcess 不做 PATHEXT 查找）。
 - 模型接入：自定义端点配置在用户级 `~/.pi/agent/models.json`（注意是 `agent/` 子目录），`apiKey` 支持 `$ENV_VAR` 插值，凭据不写入仓库。
 - 项目级 `.agents/skills/` 需要 `--approve` 信任；AutoResearch 的版本化事实源位于 `skills/`，运行时用 `--skill skills/<name>` 显式加载（`tests/fixtures/pi-skill-project/` 为最小 Skill 样例）。

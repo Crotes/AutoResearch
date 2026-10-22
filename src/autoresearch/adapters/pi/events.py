@@ -69,8 +69,9 @@ def normalize_record(
 
     if record_type == "agent_settled":
         aborted = bool(record.get("aborted"))
-        kind = EventKind.RUN_CANCELLED if aborted else EventKind.RUN_COMPLETED
-        return (NormalizedEvent(kind, {}),), state
+        if aborted:
+            return (NormalizedEvent(EventKind.RUN_CANCELLED, {}),), state
+        return (), state
 
     if record_type == "message_end":
         return _normalize_message_end(record, state)

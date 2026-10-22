@@ -31,6 +31,7 @@ Blocked by: 03, 04, 06
 - 2026-10-22：用户要求继续完成任务，Owner 由 Kimi 交接为 Codex；沿用 `feat/07-core-research-skills` 分支，不包含尚未合并的 PR #5。
 - 六个 Skill 采用统一输出信封与最小 Tool 白名单；`plan-research` 使用独立 `plan_confirmation` 人工闸门，确认前停止来源发现。
 - 2026-10-22：实现已提交并创建 PR #6，等待非作者评审与合并。
+- 2026-10-22：PR #5 合并后同步 `origin/main`；README 与 research-tools 说明冲突已保留双方意图，合并后的 187 项测试及全部静态检查通过。
 
 ## Answer
 

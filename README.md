@@ -8,7 +8,8 @@ AutoResearch 是一个面向实验室内部使用的 Skill-first 研究资料收
 - 纯函数工作流状态机，含两道人工审核门（选源、终审）
 - `PiRuntimeAdapter`：一运行一 `pi --mode rpc` 子进程，固定 pi **1.4.0**，事件归一化与审计落盘
 - research-tools MCP Server：六个受控 Tool（stdlib 自实现协议，运行时零依赖），含域名白名单、不可信内容信封、幂等提交等安全边界
-- arXiv、GitHub、RSS/Atom 与手动 URL 来源连接器，以及正文规范化、分块和成果身份解析
+- 四类来源连接器：arXiv、GitHub、RSS/Atom 白名单和手动 URL，含分页、限流、重试、缓存与访问策略
+- 内容处理与成果身份解析：HTML/PDF/Markdown/纯文本、稳定证据锚点、成果级归并和人工纠错
 - 六个版本化核心研究 Skills，包含输入/输出契约、样例、证据判定、最小 Tool 白名单和三个人工审核请求点
 - 离线 Fake 纵向切片：不连网、不连模型即可跑通完整流程并导出工件
 

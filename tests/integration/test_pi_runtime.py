@@ -71,27 +71,47 @@ def test_adapter_satisfies_worker_runtime_port(tmp_path: Path) -> None:
     assert isinstance(make_adapter(tmp_path), WorkerRuntime)
 
 
-def test_happy_run_completes_with_normalized_events(
+def test_happy_run_requires_both_human_review_gates(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("FAKE_PI_SCENARIO", "happy")
     adapter = make_adapter(tmp_path)
     run_id = adapter.start(make_spec())
     try:
-        wait_for(lambda: adapter.inspect(run_id).status is RunStatus.COMPLETED)
+        wait_for(
+            lambda: adapter.inspect(run_id).status is RunStatus.REVIEW_REQUIRED,
+            timeout=2.0,
+        )
 
         run = adapter.inspect(run_id)
-        assert run.checkpoint == "completed"
+        assert run.checkpoint == "overviews_ready"
         assert event_kinds(adapter, run_id) == [
             EventKind.RUN_STARTED,
             EventKind.STEP_STARTED,
             EventKind.ARTIFACT_CREATED,
-            EventKind.RUN_COMPLETED,
+            EventKind.REVIEW_REQUESTED,
         ]
+
+        with pytest.raises(ValueError, match="selection"):
+            adapter.resume(run_id)
+        adapter.review_selection(run_id, ("work-selected",))
+        adapter.resume(run_id)
+        wait_for(
+            lambda: adapter.inspect(run_id).checkpoint == "analyses_ready",
+            timeout=2.0,
+        )
+        assert adapter.inspect(run_id).status is RunStatus.REVIEW_REQUIRED
+
+        with pytest.raises(ValueError, match="approval"):
+            adapter.resume(run_id)
+        adapter.review_final(run_id, approved=True)
+        adapter.resume(run_id)
+        assert adapter.inspect(run_id).status is RunStatus.COMPLETED
+        assert adapter.inspect(run_id).checkpoint == "completed"
 
         page = adapter.events(run_id, cursor=1)
         assert page.events[0].kind is EventKind.STEP_STARTED
-        assert page.next_cursor == 4
+        assert page.next_cursor == len(adapter.events(run_id).events)
         with pytest.raises(ValueError, match="cursor"):
             adapter.events(run_id, cursor=99)
 
@@ -171,10 +191,10 @@ def test_invalid_json_line_is_audited_without_breaking_the_run(
     adapter = make_adapter(tmp_path)
     run_id = adapter.start(make_spec())
     try:
-        wait_for(lambda: adapter.inspect(run_id).status is RunStatus.COMPLETED)
+        wait_for(lambda: adapter.inspect(run_id).status is RunStatus.REVIEW_REQUIRED)
 
         kinds = event_kinds(adapter, run_id)
-        assert EventKind.RUN_COMPLETED in kinds
+        assert EventKind.REVIEW_REQUESTED in kinds
         protocol_failures = [
             event
             for event in adapter.events(run_id).events
@@ -186,16 +206,18 @@ def test_invalid_json_line_is_audited_without_breaking_the_run(
         adapter.dispose(run_id)
 
 
-def test_auto_retry_then_settle_completes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_auto_retry_then_settle_requests_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("FAKE_PI_SCENARIO", "retry")
     adapter = make_adapter(tmp_path)
     run_id = adapter.start(make_spec())
     try:
-        wait_for(lambda: adapter.inspect(run_id).status is RunStatus.COMPLETED)
+        wait_for(lambda: adapter.inspect(run_id).status is RunStatus.REVIEW_REQUIRED)
 
         kinds = event_kinds(adapter, run_id)
         assert EventKind.STEP_FAILED in kinds
-        assert kinds[-1] is EventKind.RUN_COMPLETED
+        assert kinds[-1] is EventKind.REVIEW_REQUESTED
     finally:
         adapter.dispose(run_id)
 

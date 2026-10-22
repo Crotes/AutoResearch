@@ -121,7 +121,7 @@ class PiProcess:
             try:
                 self._process.stdin.write(encode_record(record))
                 self._process.stdin.flush()
-            except (BrokenPipeError, OSError) as error:
+            except (BrokenPipeError, OSError, ValueError) as error:
                 self._pending.pop(request_id, None)
                 raise _failure(
                     ErrorCategory.TRANSIENT,

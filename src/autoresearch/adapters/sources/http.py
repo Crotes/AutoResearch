@@ -14,7 +14,7 @@ import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from autoresearch.domain.errors import AutoResearchError, ErrorCategory, Failure
 
@@ -23,6 +23,7 @@ DEFAULT_MAX_RETRIES = 3
 DEFAULT_BASE_DELAY = 0.5
 DEFAULT_REQUESTS_PER_SECOND = 5.0
 DEFAULT_CACHE_TTL = 24 * 3600.0
+DEFAULT_MAX_REDIRECTS = 5
 
 USER_AGENT = "autoresearch-poc/0.1 (+https://autoresearch.local)"
 
@@ -46,13 +47,24 @@ class HttpResponse:
 Transport = Callable[[HttpRequest, float], HttpResponse]
 MonotonicClock = Callable[[], float]
 Sleeper = Callable[[float], None]
+UrlValidator = Callable[[str], None]
+
+_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(  # type: ignore[no-untyped-def]
+        self, req, fp, code, msg, headers, newurl
+    ):
+        return None
 
 
 def urllib_transport(request: HttpRequest, timeout: float) -> HttpResponse:
     headers = {"User-Agent": USER_AGENT, **request.headers}
     urllib_request = urllib.request.Request(request.url, headers=headers)
     try:
-        with urllib.request.urlopen(urllib_request, timeout=timeout) as response:
+        opener = urllib.request.build_opener(_NoRedirectHandler())
+        with opener.open(urllib_request, timeout=timeout) as response:
             return HttpResponse(
                 status=response.status,
                 headers={key.lower(): value for key, value in response.headers.items()},
@@ -173,6 +185,7 @@ class HttpClient:
         base_delay: float = DEFAULT_BASE_DELAY,
         requests_per_second: float = DEFAULT_REQUESTS_PER_SECOND,
         cache: FileCache | None = None,
+        max_redirects: int = DEFAULT_MAX_REDIRECTS,
         clock: MonotonicClock = time.monotonic,
         wall_clock: MonotonicClock = time.time,
         sleeper: Sleeper = time.sleep,
@@ -183,26 +196,60 @@ class HttpClient:
         self._base_delay = base_delay
         self._requests_per_second = requests_per_second
         self._cache = cache
+        self._max_redirects = max_redirects
         self._clock = clock
         self._wall_clock = wall_clock
         self._sleeper = sleeper
         self._buckets: dict[str, _TokenBucket] = {}
 
-    def get(self, url: str, *, headers: dict[str, str] | None = None) -> HttpResponse:
-        if self._cache is not None:
+    def get(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        cache_response: bool = True,
+        url_validator: UrlValidator | None = None,
+    ) -> HttpResponse:
+        if url_validator is not None:
+            url_validator(url)
+        if cache_response and self._cache is not None:
             cached = self._cache.get(url, self._wall_clock())
             if cached is not None:
                 return cached
-        response = self._fetch(url, headers or {})
-        if self._cache is not None:
-            self._cache.put(url, response, self._wall_clock())
-        return response
+        current_url = url
+        for redirect_count in range(self._max_redirects + 1):
+            response = self._fetch(current_url, headers or {})
+            if response.status not in _REDIRECT_STATUSES:
+                if cache_response and self._cache is not None:
+                    self._cache.put(url, response, self._wall_clock())
+                return response
+            location = response.headers.get("location")
+            if not location:
+                raise AutoResearchError(
+                    Failure(
+                        category=ErrorCategory.PERMANENT,
+                        code="http.redirect_without_location",
+                        message=f"http redirect from {current_url!r} has no location",
+                    )
+                )
+            if redirect_count >= self._max_redirects:
+                raise AutoResearchError(
+                    Failure(
+                        category=ErrorCategory.PERMANENT,
+                        code="http.too_many_redirects",
+                        message=f"too many redirects while fetching {url!r}",
+                    )
+                )
+            current_url = urljoin(current_url, location)
+            if url_validator is not None:
+                url_validator(current_url)
+        raise AssertionError("redirect loop must return or raise")
 
     def _fetch(self, url: str, headers: dict[str, str]) -> HttpResponse:
-        self._bucket_for(url).acquire(self._clock, self._sleeper)
         request = HttpRequest(url=url, headers=headers)
         last_failure: Failure | None = None
         for attempt in range(self._max_retries + 1):
+            self._bucket_for(url).acquire(self._clock, self._sleeper)
             try:
                 response = self._transport(request, self._timeout)
             except (urllib.error.URLError, OSError, TimeoutError) as error:
@@ -215,6 +262,8 @@ class HttpClient:
                 if attempt < self._max_retries:
                     self._sleeper(self._base_delay * (2.0**attempt))
                 continue
+            if response.status in _REDIRECT_STATUSES:
+                return response
             failure = classify_status(response.status)
             if failure is None:
                 return response
