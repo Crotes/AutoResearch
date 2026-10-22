@@ -1,7 +1,8 @@
 # 物化正文并解析成果身份
 
 Type: task
-Status: ready-for-agent
+Status: claimed
+Owner: Kimi
 Blocked by: 04, 05
 
 ## 目标
