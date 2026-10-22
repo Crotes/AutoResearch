@@ -1,0 +1,46 @@
+{
+  "input": {
+    "plan": {
+      "question": "Agent 如何通过经验反馈实现自进化？",
+      "source_kinds": ["arxiv", "github"]
+    },
+    "queries": ["agent self-improvement experience feedback memory reflection"],
+    "plan_review": { "gate": "plan_confirmation", "status": "approved" },
+    "max_candidates": 20
+  },
+  "output": {
+    "schema_version": "1.0",
+    "skill": { "name": "collect-sources", "version": "1.0.0" },
+    "markdown": "# 采集结果\n\n已发现并物化 1 个候选；另有 1 个来源因限流暂未获取。",
+    "structured": {
+      "candidates": [
+        {
+          "title": "Self-Improving Language Models from Experience",
+          "kind": "arxiv",
+          "canonical_url": "https://arxiv.org/abs/2401.00001",
+          "source_version_id": "source-arxiv-2401.00001-v1",
+          "materialized": true
+        }
+      ],
+      "failures": [
+        {
+          "locator": "github:lab/example-agent",
+          "category": "transient",
+          "message": "来源暂时限流，可在预算内重试。"
+        }
+      ],
+      "stop_reason": "source_exhausted"
+    },
+    "evidence": [
+      {
+        "claim_id": "candidate-title-1",
+        "claim": "该候选讨论从经验中改进语言模型。",
+        "disposition": "supported",
+        "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-0"],
+        "rationale": "标题和摘要分块直接支持该描述。"
+      }
+    ],
+    "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-0"],
+    "warnings": ["github:lab/example-agent 获取失败，但未中止其他来源。"]
+  }
+}

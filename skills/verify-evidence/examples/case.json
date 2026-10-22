@@ -1,0 +1,49 @@
+{
+  "input": {
+    "draft_kind": "analysis",
+    "claims": [
+      {
+        "claim_id": "result-1",
+        "text": "经验反馈在摘要列出的任务上提高了性能。",
+        "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-5"]
+      },
+      {
+        "claim_id": "result-2",
+        "text": "经验反馈保证所有任务持续改进。",
+        "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-5"]
+      }
+    ],
+    "allowed_source_version_ids": ["source-arxiv-2401.00001-v1"]
+  },
+  "output": {
+    "schema_version": "1.0",
+    "skill": { "name": "verify-evidence", "version": "1.0.0" },
+    "markdown": "# 证据核验\n\n已支持：经验反馈在摘要列出的任务上提高了性能。\n\n已拒绝：材料不能支持对所有任务的保证。",
+    "structured": {
+      "decision": "revise",
+      "counts": { "supported": 1, "inference": 0, "rejected": 1 },
+      "claim_results": [
+        { "claim_id": "result-1", "disposition": "supported", "action": "keep" },
+        { "claim_id": "result-2", "disposition": "rejected", "action": "remove" }
+      ]
+    },
+    "evidence": [
+      {
+        "claim_id": "result-1",
+        "claim": "经验反馈在摘要列出的任务上提高了性能。",
+        "disposition": "supported",
+        "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-5"],
+        "rationale": "结果分块在限定任务范围内报告了改进。"
+      },
+      {
+        "claim_id": "result-2",
+        "claim": "经验反馈保证所有任务持续改进。",
+        "disposition": "rejected",
+        "evidence_ids": [],
+        "rationale": "引用只覆盖有限实验，不能推出所有任务或保证性结论。"
+      }
+    ],
+    "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-5"],
+    "warnings": ["草稿含有范围过度外推，需移除后再提交。"]
+  }
+}

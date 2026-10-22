@@ -1,0 +1,53 @@
+{
+  "input": {
+    "question": "Agent 如何通过经验反馈实现自进化？",
+    "candidates": [
+      {
+        "work_id": "work-2401.00001",
+        "source_version_id": "source-arxiv-2401.00001-v1",
+        "title": "Self-Improving Language Models from Experience",
+        "canonical_url": "https://arxiv.org/abs/2401.00001",
+        "kind": "arxiv"
+      }
+    ]
+  },
+  "output": {
+    "schema_version": "1.0",
+    "skill": { "name": "triage-sources", "version": "1.0.0" },
+    "markdown": "# 速览\n\n## Self-Improving Language Models from Experience\n该工作研究利用经验反馈迭代改进模型，与 Agent 自进化直接相关。",
+    "structured": {
+      "overviews": [
+        {
+          "work_id": "work-2401.00001",
+          "title": "Self-Improving Language Models from Experience",
+          "conclusion": "该工作研究利用经验反馈迭代改进模型。",
+          "relation": "为 Agent 自进化提供经验闭环方法。",
+          "canonical_url": "https://arxiv.org/abs/2401.00001",
+          "tags": ["self-improvement", "experience feedback"],
+          "scores": {
+            "relevance": 5,
+            "credibility": 3,
+            "evidence_strength": 3,
+            "novelty": 4,
+            "timeliness": 4,
+            "reproducibility": 2,
+            "potential_value": 5
+          },
+          "recommendation": "select"
+        }
+      ],
+      "review": { "gate": "source_selection", "status": "pending" }
+    },
+    "evidence": [
+      {
+        "claim_id": "overview-1",
+        "claim": "该工作研究利用经验反馈迭代改进模型。",
+        "disposition": "supported",
+        "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-0"],
+        "rationale": "摘要明确描述经验反馈与迭代改进。"
+      }
+    ],
+    "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-0"],
+    "warnings": ["尚未核验代码仓库，复现性评分置信度较低。"]
+  }
+}

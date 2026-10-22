@@ -263,12 +263,13 @@ class TestSubmitArtifact:
 
 
 class TestRequestHumanReview:
-    def test_allowed_gate_notifies_callback(self) -> None:
+    @pytest.mark.parametrize("gate", ["plan_confirmation", "source_selection", "final_approval"])
+    def test_allowed_gate_notifies_callback(self, gate: str) -> None:
         calls: list[tuple[str, str]] = []
         context = make_context(request_review=lambda gate, message: calls.append((gate, message)))
-        result = call(context, "request_human_review", {"gate": "source_selection"})
-        assert result == {"requested": True, "gate": "source_selection"}
-        assert calls == [("source_selection", "")]
+        result = call(context, "request_human_review", {"gate": gate})
+        assert result == {"requested": True, "gate": gate}
+        assert calls == [(gate, "")]
 
     def test_unknown_gate_is_rejected(self) -> None:
         with pytest.raises(ToolError) as excinfo:

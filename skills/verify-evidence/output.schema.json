@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoresearch.local/skills/verify-evidence/output.schema.json",
+  "title": "verify-evidence output",
+  "allOf": [
+    { "$ref": "https://autoresearch.local/skills/_shared/output-envelope.schema.json" },
+    {
+      "properties": {
+        "skill": {
+          "properties": {
+            "name": { "const": "verify-evidence" },
+            "version": { "const": "1.0.0" }
+          }
+        },
+        "structured": {
+          "type": "object",
+          "required": ["decision", "counts", "claim_results"],
+          "properties": {
+            "decision": { "enum": ["pass", "revise", "reject"] },
+            "counts": {
+              "type": "object",
+              "required": ["supported", "inference", "rejected"],
+              "properties": {
+                "supported": { "type": "integer", "minimum": 0 },
+                "inference": { "type": "integer", "minimum": 0 },
+                "rejected": { "type": "integer", "minimum": 0 }
+              },
+              "additionalProperties": false
+            },
+            "claim_results": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["claim_id", "disposition", "action"],
+                "properties": {
+                  "claim_id": { "type": "string", "minLength": 1 },
+                  "disposition": { "enum": ["supported", "inference", "rejected"] },
+                  "action": { "enum": ["keep", "label", "remove"] }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

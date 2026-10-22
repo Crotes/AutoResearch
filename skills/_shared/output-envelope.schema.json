@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoresearch.local/skills/_shared/output-envelope.schema.json",
+  "title": "Skill output envelope",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "skill",
+    "markdown",
+    "structured",
+    "evidence",
+    "evidence_ids",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "skill": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+      },
+      "additionalProperties": false
+    },
+    "markdown": { "type": "string", "minLength": 1 },
+    "structured": { "type": "object" },
+    "evidence": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence" }
+    },
+    "evidence_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[^#]+#chunk-[0-9]+(?:@page-[0-9]+)?$"
+      },
+      "uniqueItems": true
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "required": ["claim_id", "claim", "disposition", "evidence_ids", "rationale"],
+      "properties": {
+        "claim_id": { "type": "string", "minLength": 1 },
+        "claim": { "type": "string", "minLength": 1 },
+        "disposition": { "enum": ["supported", "inference", "rejected"] },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[^#]+#chunk-[0-9]+(?:@page-[0-9]+)?$"
+          },
+          "uniqueItems": true
+        },
+        "rationale": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "disposition": { "const": "supported" } } },
+          "then": { "properties": { "evidence_ids": { "minItems": 1 } } }
+        }
+      ],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,57 @@
+{
+  "input": {
+    "question": "Agent 如何通过经验反馈实现自进化？",
+    "selected_work_ids": ["work-memory", "work-reflection"],
+    "analyses": [
+      {
+        "work_id": "work-memory",
+        "summary": "使用经验记忆改进后续策略。",
+        "source_version_ids": ["source-memory-v1"],
+        "evidence_ids": ["source-memory-v1#chunk-2"]
+      },
+      {
+        "work_id": "work-reflection",
+        "summary": "使用失败反思生成下一轮行动建议。",
+        "source_version_ids": ["source-reflection-v1"],
+        "evidence_ids": ["source-reflection-v1#chunk-4"]
+      }
+    ],
+    "predefined_categories": ["memory", "reflection", "tool evolution"]
+  },
+  "output": {
+    "schema_version": "1.0",
+    "skill": { "name": "synthesize-topic", "version": "1.0.0" },
+    "markdown": "# 分类总结\n\n## 共识\n两个工作都将历史经验转化为后续决策上下文。\n\n## 证据缺口\n尚缺统一的长期稳定性评测。",
+    "structured": {
+      "categories": [
+        { "name": "memory", "origin": "predefined", "work_ids": ["work-memory"] },
+        { "name": "failure-driven adaptation", "origin": "emergent", "work_ids": ["work-reflection"] }
+      ],
+      "method_comparison": ["记忆方法保留历史轨迹；反思方法把失败压缩为行动建议。"],
+      "consensus": ["历史经验需要以可供下一轮调用的形式进入决策上下文。"],
+      "conflicts": ["两项工作对经验保留粒度采取不同策略。"],
+      "evidence_gaps": ["缺少统一的长期稳定性评测。"],
+      "research_gaps": ["尚不清楚记忆增长与策略漂移之间的关系。"],
+      "follow_up_questions": ["如何在长期运行中控制错误经验的累积？"],
+      "review": { "gate": "final_approval", "status": "pending" }
+    },
+    "evidence": [
+      {
+        "claim_id": "consensus-1",
+        "claim": "两个工作都将历史经验转化为后续决策上下文。",
+        "disposition": "supported",
+        "evidence_ids": ["source-memory-v1#chunk-2", "source-reflection-v1#chunk-4"],
+        "rationale": "两个方法段分别描述记忆回用与反思建议回用。"
+      },
+      {
+        "claim_id": "stability-1",
+        "claim": "这些方法已经解决长期策略漂移。",
+        "disposition": "rejected",
+        "evidence_ids": [],
+        "rationale": "所选成果均未提供足以支持该结论的长期实验。"
+      }
+    ],
+    "evidence_ids": ["source-memory-v1#chunk-2", "source-reflection-v1#chunk-4"],
+    "warnings": ["长期稳定性结论证据不足，已作为研究缺口而非事实呈现。"]
+  }
+}

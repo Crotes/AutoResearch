@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoresearch.local/skills/collect-sources/output.schema.json",
+  "title": "collect-sources output",
+  "allOf": [
+    { "$ref": "https://autoresearch.local/skills/_shared/output-envelope.schema.json" },
+    {
+      "properties": {
+        "skill": {
+          "properties": {
+            "name": { "const": "collect-sources" },
+            "version": { "const": "1.0.0" }
+          }
+        },
+        "structured": {
+          "type": "object",
+          "required": ["candidates", "failures", "stop_reason"],
+          "properties": {
+            "candidates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["title", "kind", "canonical_url", "source_version_id", "materialized"],
+                "properties": {
+                  "title": { "type": "string", "minLength": 1 },
+                  "kind": { "enum": ["arxiv", "github", "rss", "manual_url"] },
+                  "canonical_url": { "type": "string", "format": "uri" },
+                  "source_version_id": { "type": ["string", "null"] },
+                  "materialized": { "type": "boolean" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "failures": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["locator", "category", "message"],
+                "properties": {
+                  "locator": { "type": "string", "minLength": 1 },
+                  "category": { "enum": ["transient", "permanent", "content", "model", "policy", "internal"] },
+                  "message": { "type": "string", "minLength": 1 }
+                },
+                "additionalProperties": false
+              }
+            },
+            "stop_reason": { "enum": ["budget_reached", "no_new_candidates", "source_exhausted"] }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}
