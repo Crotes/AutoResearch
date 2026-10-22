@@ -1,7 +1,8 @@
 # 创建核心研究 Skills
 
 Type: task
-Status: ready-for-agent
+Status: claimed
+Owner: Kimi
 Blocked by: 03, 04, 06
 
 ## 目标
