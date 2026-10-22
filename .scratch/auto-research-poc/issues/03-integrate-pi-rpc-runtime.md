@@ -1,7 +1,8 @@
 # 集成 Pi RPC Runtime
 
 Type: task
-Status: ready-for-agent
+Status: claimed
+Owner: Kimi
 Blocked by: 01, 02
 
 ## 目标
