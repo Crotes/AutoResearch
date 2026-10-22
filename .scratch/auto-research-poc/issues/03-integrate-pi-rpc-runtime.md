@@ -38,6 +38,8 @@ Blocked by: 01, 02
 - `pytest` 54 项通过（含协议分帧、fixture 归一化、事件 schema 校验、fake_pi 全生命周期集成：start/events/resume/完成、cancel、预算超时、异常退出、无效 JSON、错误后误标完成的回归）；Ruff 检查与格式检查通过；mypy strict 通过；`autoresearch demo` 正常。
 - 上层集成测试只引用 `PiRuntimeAdapter` 类本身与 ports/domain 类型，不引用 Pi RPC 协议类型。
 
-现场验收（真实 pi + 最小 Skill）：**未通过，凭据/网络阻塞**。已验证 `pi --mode rpc` 握手、`/skill:minimal` 技能扩展、`set_model` 自定义端点均正常；但模型调用全部失败——`ANTHROPIC_API_KEY` 实为 DeepSeek 端点（`api.deepseek.com`）密钥且该域名当前连接被重置，`MOONSHOT_API_KEY` 账户余额不足被暂停，二者均不可用。验收脚本保留在 `.autoresearch/acceptance/accept.py`，恢复任一可用凭据后重跑即可完成验收。
+现场验收（真实 pi + 最小 Skill）：**通过**（2026-10-22）。DeepSeek Anthropic 兼容端点 + `deepseek-flash`，`/skill:minimal` 返回期望的结构化 JSON `{"skill": "minimal", "status": "ok"}`。配置方式：仓库根 `.env`（模板 `.env.example`）提供 `PI_MODEL_ID`/`PI_MODEL_BASE_URL`/`PI_API_KEY`，验收脚本 `.autoresearch/acceptance/accept.py` 据此渲染 `~/.pi/agent/models.json` 后驱动真实 pi 子进程。
 
-任务保持 `claimed`：验收项"可执行一个最小 Skill 并取得结构化结果"待有效模型凭据后补验。
+验收中发现的环境事实：pi 的 `models.json` 仅 `apiKey` 支持 `$ENV` 插值，`baseUrl` 不插值，故由脚本渲染；此前曾遇 `api.deepseek.com` 连接重置与 Moonshot 账户暂停，均为环境问题而非实现缺陷。
+
+任务验收三项均已满足，待 PR 评审合并后转为 `resolved`。
