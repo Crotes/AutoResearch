@@ -9,7 +9,9 @@ from jsonschema import Draft202012Validator, FormatChecker
 ROOT = Path(__file__).parents[2]
 
 
-@pytest.mark.parametrize("name", ["run", "source", "artifact", "event"])
+@pytest.mark.parametrize(
+    "name", ["run", "source", "artifact", "event", "review-decision", "skill-version"]
+)
 def test_example_satisfies_contract(name: str) -> None:
     schema = json.loads((ROOT / "schemas" / f"{name}.schema.json").read_text(encoding="utf-8"))
     fixture = json.loads(

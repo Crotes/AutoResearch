@@ -42,10 +42,11 @@ class InMemoryLibrarySearch:
             document = self._documents[source_version_id]
         except KeyError as error:
             raise KeyError(f"unknown source version: {source_version_id}") from error
-        selected = document.chunks[max(start, 0) : max(start, 0) + max(limit, 0)]
+        # Public anchors are 1-based.  ``start=0`` remains a convenient API
+        # value meaning "from the first chunk" for existing callers.
+        first = max(start, 1)
+        selected = document.chunks[first - 1 : first - 1 + max(limit, 0)]
         return tuple(
-            LibraryChunk(
-                source_version_id=source_version_id, index=max(start, 0) + offset, text=text
-            )
+            LibraryChunk(source_version_id=source_version_id, index=first + offset, text=text)
             for offset, text in enumerate(selected)
         )

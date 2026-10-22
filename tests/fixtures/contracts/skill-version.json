@@ -1,0 +1,6 @@
+{
+  "name": "collect-sources",
+  "version": "1.0.0",
+  "manifest_hash": "sha256:example",
+  "source_ref": "skills/collect-sources"
+}

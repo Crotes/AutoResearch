@@ -140,7 +140,7 @@ def test_full_mcp_stdio_lifecycle(client: StdioClient) -> None:
         )
     )
     assert chunks["untrusted"] is True
-    assert chunks["chunks"][0]["index"] == 0
+    assert chunks["chunks"][0]["index"] == 1
 
     submitted = decode_result(
         call_tool(
@@ -150,7 +150,7 @@ def test_full_mcp_stdio_lifecycle(client: StdioClient) -> None:
                 "idempotency_key": "k-stdio",
                 "kind": "overview",
                 "markdown": "# 概述",
-                "evidence_ids": [f"{materialized['source_version_id']}#chunk-0"],
+                "evidence_ids": [f"{materialized['source_version_id']}#chunk-1"],
             },
         )
     )
@@ -163,7 +163,7 @@ def test_full_mcp_stdio_lifecycle(client: StdioClient) -> None:
                 "idempotency_key": "k-stdio",
                 "kind": "overview",
                 "markdown": "# 概述",
-                "evidence_ids": [f"{materialized['source_version_id']}#chunk-0"],
+                "evidence_ids": [f"{materialized['source_version_id']}#chunk-1"],
             },
         )
     )

@@ -69,7 +69,7 @@ def make_context(**overrides: Any) -> ToolContext:
 
 def valid_evidence(context: ToolContext) -> str:
     source_version_id = next(iter(context.materialized_ids))
-    return f"{source_version_id}#chunk-0"
+    return f"{source_version_id}#chunk-1"
 
 
 def call(context: ToolContext, tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -194,7 +194,7 @@ class TestReadSourceChunks:
             context, "read_source_chunks", {"source_version_id": document.source_version.id}
         )
         assert result["untrusted"] is True
-        assert result["chunks"][0]["index"] == 0
+        assert result["chunks"][0]["index"] == 1
 
     def test_unknown_or_foreign_source_is_rejected(self) -> None:
         with pytest.raises(ToolError) as excinfo:
@@ -264,7 +264,7 @@ class TestSubmitArtifact:
                     "idempotency_key": "forged",
                     "kind": "overview",
                     "markdown": "# 概述",
-                    "evidence_ids": ["source-foreign#chunk-0"],
+                    "evidence_ids": ["source-foreign#chunk-1"],
                 },
             )
 

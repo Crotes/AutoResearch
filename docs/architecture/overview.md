@@ -29,7 +29,7 @@ Application
         └─ ArtifactSubmission
 ```
 
-SQLite 和本地文件系统是 PoC Adapter。模块接口不暴露其实现细节，以便内部 Alpha 替换为 PostgreSQL、对象存储和队列。
+ SQLite 和本地文件系统是 PoC Adapter。`SqliteResearchLibrary` 保存项目、运行、成果、来源版本、证据、工件和审核决定；FTS5 提供工件检索，正文按访问策略写入内容寻址目录。模块接口不暴露其实现细节，以便内部 Alpha 替换为 PostgreSQL、对象存储和队列。
 
 research-tools MCP Server 已实现于 `src/autoresearch/adapters/mcp/`（stdlib stdio JSON-RPC，保持运行时零依赖），向 Skills 暴露六个受控 Tool；安全边界见 `tools/research_tools/README.md`。
 
