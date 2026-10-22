@@ -7,7 +7,7 @@ import pytest
 from fake_http import FakeClock, FakeSleeper, FakeTransport, ok, status
 
 from autoresearch.adapters.sources.http import FileCache, HttpClient, HttpRequest
-from autoresearch.domain import AutoResearchError, ErrorCategory
+from autoresearch.domain import AutoResearchError, ErrorCategory, Failure
 
 
 def make_client(
@@ -132,6 +132,44 @@ def test_cache_hit_serves_offline_and_expires(tmp_path: Path) -> None:
     clock.now += 31  # beyond ttl
     assert client.get("https://example.org/x").text() == "cached"
     assert len(transport.requests) == 2
+
+
+def test_sensitive_response_can_bypass_file_cache(tmp_path: Path) -> None:
+    transport = FakeTransport({"https://example.org/private": ok(b"private body")})
+    cache = FileCache(tmp_path / "cache")
+    client, _, _ = make_client(transport, cache=cache)
+
+    assert client.get("https://example.org/private", cache_response=False).status == 200
+
+    assert not (tmp_path / "cache").exists()
+
+
+def test_redirect_target_is_revalidated_before_following() -> None:
+    start = "https://example.org/start"
+    private = "http://127.0.0.1/admin"
+    transport = FakeTransport(
+        {
+            start: status(302, headers={"location": private}),
+            private: ok(b"secret"),
+        }
+    )
+    client, _, _ = make_client(transport)
+
+    def validate(url: str) -> None:
+        if "127.0.0.1" in url:
+            raise AutoResearchError(
+                Failure(
+                    category=ErrorCategory.POLICY,
+                    code="test.private_redirect",
+                    message="private redirect",
+                )
+            )
+
+    with pytest.raises(AutoResearchError) as excinfo:
+        client.get(start, url_validator=validate)
+
+    assert excinfo.value.failure.category is ErrorCategory.POLICY
+    assert [request.url for request in transport.requests] == [start]
 
 
 def test_request_headers_are_passed_to_transport() -> None:

@@ -2,23 +2,17 @@
 
 from __future__ import annotations
 
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import urlsplit
 
 from autoresearch.domain.models import AccessPolicy
-
-TRACKING_PARAMS = frozenset(
-    {
-        "utm_source",
-        "utm_medium",
-        "utm_campaign",
-        "utm_term",
-        "utm_content",
-        "utm_id",
-        "gclid",
-        "fbclid",
-        "igshid",
-        "ref",
-    }
+from autoresearch.domain.urls import (
+    normalize_arxiv_url as normalize_arxiv_url,
+)
+from autoresearch.domain.urls import (
+    normalize_github_url as normalize_github_url,
+)
+from autoresearch.domain.urls import (
+    normalize_url as normalize_url,
 )
 
 _OPEN_SPDX = frozenset(
@@ -36,47 +30,6 @@ _OPEN_SPDX = frozenset(
         "Zlib",
     }
 )
-
-
-def normalize_url(url: str) -> str:
-    """Lowercase scheme/host, drop tracking params and fragments, sort query."""
-    parts = urlsplit(url.strip())
-    scheme = parts.scheme.lower()
-    host = (parts.hostname or "").lower()
-    try:
-        port = parts.port
-    except ValueError:
-        port = None
-    netloc = host
-    if port is not None and (scheme, port) not in (("http", 80), ("https", 443)):
-        netloc = f"{host}:{port}"
-    path = parts.path or "/"
-    pairs = sorted(
-        (key, value)
-        for key, value in parse_qsl(parts.query, keep_blank_values=True)
-        if key.lower() not in TRACKING_PARAMS
-    )
-    return urlunsplit((scheme, netloc, path, urlencode(pairs), ""))
-
-
-def normalize_arxiv_url(url: str) -> str:
-    """Fold arXiv pdf links onto the canonical abs page."""
-    normalized = normalize_url(url)
-    parts = urlsplit(normalized)
-    path = parts.path
-    if path.startswith("/pdf/"):
-        path = "/abs/" + path[len("/pdf/") :].removesuffix(".pdf")
-    return urlunsplit((parts.scheme, parts.netloc, path, parts.query, ""))
-
-
-def normalize_github_url(url: str) -> str:
-    """Fold ``.git`` suffixes and trailing slashes onto /owner/repo."""
-    normalized = normalize_url(url)
-    parts = urlsplit(normalized)
-    if parts.netloc != "github.com":
-        return normalized
-    path = parts.path.removesuffix("/").removesuffix(".git").lower()
-    return urlunsplit((parts.scheme, parts.netloc, path, "", ""))
 
 
 def normalize_source_url(url: str) -> str:

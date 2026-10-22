@@ -8,6 +8,7 @@ a domain ``Failure``.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -33,6 +34,8 @@ MAX_SEARCH_LIMIT = 50
 MAX_CHUNK_LIMIT = 20
 
 DEFAULT_REVIEW_GATES = ("source_selection", "final_approval")
+
+_EVIDENCE_ANCHOR = re.compile(r"^(?P<source_version_id>[^#]+)#chunk-(?P<index>\d+)(?:@page-\d+)?$")
 
 
 def _noop_review(gate: str, message: str) -> None:
@@ -158,6 +161,27 @@ def validate_locator(context: ToolContext, locator: str, kind: SourceKind) -> No
             raise policy_violation(f"locator host is not on the allowlist: {hostname!r}")
 
 
+def validate_evidence_ids(context: ToolContext, evidence_ids: tuple[str, ...]) -> None:
+    for evidence_id in evidence_ids:
+        match = _EVIDENCE_ANCHOR.fullmatch(evidence_id)
+        if match is None:
+            raise policy_violation(f"invalid evidence anchor: {evidence_id!r}")
+        source_version_id = validate_source_version_id(match.group("source_version_id"))
+        if source_version_id not in context.materialized_ids:
+            raise policy_violation(
+                f"evidence source {source_version_id!r} was not materialized by this run"
+            )
+        index = int(match.group("index"))
+        try:
+            chunks = context.library.read_chunks(source_version_id, start=index, limit=1)
+        except KeyError as error:
+            raise policy_violation(
+                f"evidence source does not exist: {source_version_id!r}"
+            ) from error
+        if len(chunks) != 1 or chunks[0].index != index:
+            raise policy_violation(f"evidence chunk does not exist: {evidence_id!r}")
+
+
 # --- tool handlers ----------------------------------------------------------
 
 
@@ -199,7 +223,8 @@ def materialize_source(context: ToolContext, arguments: dict[str, Any]) -> dict[
         document = context.sources.materialize(SourceRef(kind=kind, locator=locator))
     except KeyError as error:
         raise tool_error(ErrorCategory.PERMANENT, "mcp.unknown_source", str(error)) from error
-    context.register_materialized(document.source_version.id)
+    if document.chunks:
+        context.register_materialized(document.source_version.id)
     context.on_materialized(document)
     return untrusted_envelope(
         document.source_version.id,
@@ -255,6 +280,7 @@ def submit_artifact(context: ToolContext, arguments: dict[str, Any]) -> dict[str
     evidence_ids = optional_str_list(arguments, "evidence_ids")
     if not evidence_ids:
         raise policy_violation("artifact submissions require at least one evidence id")
+    validate_evidence_ids(context, evidence_ids)
     work_id = optional_str(arguments, "work_id")
     warnings = optional_str_list(arguments, "warnings")
     structured = arguments.get("structured")

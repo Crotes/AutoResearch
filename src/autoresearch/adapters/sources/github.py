@@ -15,6 +15,7 @@ from autoresearch.adapters.sources.http import HttpClient
 from autoresearch.adapters.sources.normalize import license_access_policy, normalize_github_url
 from autoresearch.domain.errors import AutoResearchError, ErrorCategory, Failure
 from autoresearch.domain.models import (
+    AccessPolicy,
     Candidate,
     ResearchPlan,
     SourceDocument,
@@ -40,41 +41,49 @@ class GitHubSource:
         token: str | None = None,
         clock: Clock = _utc_now,
         per_page: int = 30,
+        max_pages: int = 10,
     ) -> None:
         self._http = http
         self._token = os.environ.get("GITHUB_TOKEN") if token is None else token
         self._clock = clock
         self._per_page = per_page
+        self._max_pages = max_pages
 
     def discover(self, plan: ResearchPlan) -> Iterable[Candidate]:
         if not plan.include_terms:
             return
         query = "+".join(quote(term) for term in plan.include_terms)
-        url = f"{API_URL}/search/repositories?q={query}&per_page={self._per_page}"
-        payload = self._get_json(url)
-        items = payload.get("items")
-        if not isinstance(items, list):
-            raise self._parse_failure("search response has no 'items' list")
-        for item in items:
-            yield self._candidate(item)
+        base_url = f"{API_URL}/search/repositories?q={query}&per_page={self._per_page}"
+        for page in range(1, self._max_pages + 1):
+            url = base_url if page == 1 else f"{base_url}&page={page}"
+            payload = self._get_json(url)
+            items = payload.get("items")
+            if not isinstance(items, list):
+                raise self._parse_failure("search response has no 'items' list")
+            for item in items:
+                yield self._candidate(item)
+            if len(items) < self._per_page:
+                return
 
     def materialize(self, source_ref: SourceRef) -> SourceDocument:
         locator = source_ref.locator.removeprefix("github:").strip("/").lower()
-        repo = self._get_json(f"{API_URL}/repos/{locator}")
-        sections = [str(repo.get("description") or "")]
-        readme = self._readme_text(locator)
-        if readme:
-            sections.append(readme)
-        release = self._latest_release(locator)
-        if release is not None:
-            sections.append(
-                f"Latest release {release.get('tag_name', '')}:\n{release.get('body', '')}"
-            )
-        text = "\n\n".join(section.strip() for section in sections if section.strip())
+        repo = self._get_json(f"{API_URL}/repos/{locator}", cache_response=False)
         license_info = repo.get("license")
         spdx = license_info.get("spdx_id") if isinstance(license_info, dict) else None
         if spdx in (None, "NOASSERTION"):
             spdx = None
+        access_policy = license_access_policy(spdx)
+        sections = [str(repo.get("description") or "")]
+        if access_policy is AccessPolicy.PERSIST:
+            readme = self._readme_text(locator)
+            if readme:
+                sections.append(readme)
+            release = self._latest_release(locator)
+            if release is not None:
+                sections.append(
+                    f"Latest release {release.get('tag_name', '')}:\n{release.get('body', '')}"
+                )
+        text = "\n\n".join(section.strip() for section in sections if section.strip())
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
         version = SourceVersion(
             id=f"github-{locator.replace('/', '-')}-{digest[:12]}",
@@ -83,10 +92,12 @@ class GitHubSource:
             canonical_url=normalize_github_url(str(repo.get("html_url") or locator)),
             retrieved_at=self._clock(),
             content_hash=digest,
-            access_policy=license_access_policy(spdx),
+            access_policy=access_policy,
             license=spdx,
         )
-        chunks = tuple(part for part in text.split("\n\n") if part.strip()) or (text,)
+        if access_policy is not AccessPolicy.PERSIST:
+            text = ""
+        chunks = tuple(part for part in text.split("\n\n") if part.strip())
         return SourceDocument(
             source_version=version,
             media_type="text/plain",
@@ -134,8 +145,12 @@ class GitHubSource:
             raise
         return payload
 
-    def _get_json(self, url: str) -> dict[str, Any]:
-        response = self._http.get(url, headers=self._headers())
+    def _get_json(self, url: str, *, cache_response: bool = True) -> dict[str, Any]:
+        response = self._http.get(
+            url,
+            headers=self._headers(),
+            cache_response=cache_response,
+        )
         try:
             payload = json.loads(response.body)
         except json.JSONDecodeError as error:

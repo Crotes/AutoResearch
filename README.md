@@ -8,9 +8,11 @@ AutoResearch 是一个面向实验室内部使用的 Skill-first 研究资料收
 - 纯函数工作流状态机，含两道人工审核门（选源、终审）
 - `PiRuntimeAdapter`：一运行一 `pi --mode rpc` 子进程，固定 pi **1.4.0**，事件归一化与审计落盘
 - research-tools MCP Server：六个受控 Tool（stdlib 自实现协议，运行时零依赖），含域名白名单、不可信内容信封、幂等提交等安全边界
+- 四类来源连接器：arXiv、GitHub、RSS/Atom 白名单和手动 URL，含分页、限流、重试、缓存与访问策略
+- 内容处理与成果身份解析：HTML/PDF/Markdown/纯文本、稳定证据锚点、成果级归并和人工纠错
 - 离线 Fake 纵向切片：不连网、不连模型即可跑通完整流程并导出工件
 
-尚未实现：真实网络来源连接器（任务 05/06）、核心 Skills（任务 07）、SQLite 持久化（任务 08）、完整 CLI（任务 09）。任务全景见 `.scratch/auto-research-poc/issues/`。
+尚未实现：核心 Skills（任务 07）、SQLite 持久化（任务 08）、完整 CLI（任务 09）。任务全景见 `.scratch/auto-research-poc/issues/`。
 
 ## 快速开始
 
@@ -18,7 +20,7 @@ AutoResearch 是一个面向实验室内部使用的 Skill-first 研究资料收
 
 ```powershell
 uv sync --extra dev
-uv run pytest           # 95 项测试
+uv run pytest
 uv run ruff check .
 uv run mypy
 ```

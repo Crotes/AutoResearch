@@ -14,7 +14,7 @@ PoC 的单一 MCP Tool Server。它将来源发现、正文物化、资料库检
 
 `discover_sources`、`materialize_source`、`search_library`、`read_source_chunks`、`submit_artifact`、`request_human_review`。
 
-安全边界：Agent 不能指定 run_id（强制取当前 Run 上下文）；URL 域名白名单与路径穿越拒绝；外部正文一律以 `untrusted` 信封返回；`submit_artifact` 必填幂等键且工件必须携带证据。
+安全边界：Agent 不能指定 run_id（强制取当前 Run 上下文）；URL 域名白名单、重定向目标、解析 IP 与路径穿越均受校验；外部正文一律以 `untrusted` 信封返回；`submit_artifact` 必填幂等键，且每个证据锚点必须属于当前 Run 已物化的真实分块。
 
 ## 注册方式
 

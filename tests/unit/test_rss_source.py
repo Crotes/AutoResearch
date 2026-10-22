@@ -57,7 +57,8 @@ def test_materialize_returns_metadata_only_document() -> None:
     document = source.materialize(ref)
 
     assert document.source_version.access_policy is AccessPolicy.METADATA_ONLY
-    assert document.text == "Pruning and consolidating memories using task feedback."
+    assert document.text == ""
+    assert document.chunks == ()
     assert document.source_version.retrieved_at == FIXED_NOW
 
 

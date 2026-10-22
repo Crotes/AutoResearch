@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import ipaddress
+import socket
 from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
@@ -22,6 +23,7 @@ from autoresearch.domain.models import (
 )
 
 Clock = Callable[[], datetime]
+HostResolver = Callable[[str], Iterable[str]]
 
 _TEXTUAL_MAIN_TYPES = ("text/",)
 _TEXTUAL_SUBTYPES = ("application/json", "application/xml", "application/xhtml+xml")
@@ -55,12 +57,25 @@ def is_internal_host(hostname: str) -> bool:
     )
 
 
+def _resolve_host(hostname: str) -> tuple[str, ...]:
+    return tuple(
+        str(entry[4][0]) for entry in socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
+    )
+
+
 class ManualUrlSource:
     """Fetch plan seed URLs; text-only, no internal addresses, metadata-only."""
 
-    def __init__(self, http: HttpClient, *, clock: Clock = _utc_now) -> None:
+    def __init__(
+        self,
+        http: HttpClient,
+        *,
+        clock: Clock = _utc_now,
+        resolver: HostResolver = _resolve_host,
+    ) -> None:
         self._http = http
         self._clock = clock
+        self._resolver = resolver
 
     def discover(self, plan: ResearchPlan) -> Iterable[Candidate]:
         for url in plan.seed_urls:
@@ -88,7 +103,11 @@ class ManualUrlSource:
                 "manual.internal_address",
                 f"refusing to fetch internal address: {hostname!r}",
             )
-        response = self._http.get(url)
+        response = self._http.get(
+            url,
+            cache_response=False,
+            url_validator=lambda target: self._validate_target(target, hostname),
+        )
         content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
         if not content_type.startswith(_TEXTUAL_MAIN_TYPES) and content_type not in (
             _TEXTUAL_SUBTYPES
@@ -98,7 +117,6 @@ class ManualUrlSource:
                 "manual.unsupported_media",
                 f"unsupported content type {content_type!r} for {url!r}",
             )
-        text = response.text()
         digest = hashlib.sha256(response.body).hexdigest()
         version = SourceVersion(
             id=f"manual-{digest[:12]}",
@@ -110,6 +128,40 @@ class ManualUrlSource:
             access_policy=AccessPolicy.METADATA_ONLY,
             license=None,
         )
-        return SourceDocument(
-            source_version=version, media_type=content_type, text=text, chunks=(text,)
-        )
+        return SourceDocument(source_version=version, media_type=content_type, text="", chunks=())
+
+    def _validate_target(self, url: str, allowed_host: str) -> None:
+        parts = urlsplit(url)
+        hostname = (parts.hostname or "").lower()
+        if parts.scheme not in ("http", "https"):
+            raise _failure(
+                ErrorCategory.POLICY,
+                "manual.unsupported_scheme",
+                f"only http(s) URLs may be fetched: {url!r}",
+            )
+        if hostname != allowed_host and not hostname.endswith(f".{allowed_host}"):
+            raise _failure(
+                ErrorCategory.POLICY,
+                "manual.redirect_not_allowed",
+                f"redirect host is outside the original domain: {hostname!r}",
+            )
+        if is_internal_host(hostname):
+            raise _failure(
+                ErrorCategory.POLICY,
+                "manual.internal_address",
+                f"refusing to fetch internal address: {hostname!r}",
+            )
+        try:
+            addresses = tuple(self._resolver(hostname))
+        except OSError as error:
+            raise _failure(
+                ErrorCategory.TRANSIENT,
+                "manual.dns_failure",
+                f"failed to resolve source host {hostname!r}: {error}",
+            ) from error
+        if not addresses or any(is_internal_host(address) for address in addresses):
+            raise _failure(
+                ErrorCategory.POLICY,
+                "manual.internal_address",
+                f"source host resolves to a non-public address: {hostname!r}",
+            )

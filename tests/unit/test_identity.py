@@ -27,6 +27,15 @@ def test_arxiv_id_strips_version_suffix() -> None:
     assert identity_key(IdentitySignals(arxiv_id="2401.00001v2")) == "arxiv:2401.00001"
 
 
+def test_legacy_arxiv_ids_do_not_collapse_on_category_v() -> None:
+    first = identity_key(IdentitySignals(arxiv_id="solv-int/9701001v2"))
+    second = identity_key(IdentitySignals(arxiv_id="solv-int/9701002v1"))
+
+    assert first == "arxiv:solv-int/9701001"
+    assert second == "arxiv:solv-int/9701002"
+    assert first != second
+
+
 def test_repo_url_is_normalized() -> None:
     assert identity_key(IdentitySignals(repo_url="https://github.com/Lab/Repo.git/")) == (
         "repo:https://github.com/lab/repo"
