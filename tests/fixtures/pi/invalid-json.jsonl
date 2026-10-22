@@ -1,0 +1,6 @@
+{"id":"req-1","type":"response","command":"prompt","success":true,"data":{"disposition":"started"}}
+{"type":"agent_start"}
+this is not json
+{"type":"message_end","message":{"role":"assistant","content":[{"type":"text","text":"{\"summary\": \"结论\"}"}],"stopReason":"stop","timestamp":1733234401001}}
+{"type":"agent_end","messages":[],"willRetry":false}
+{"type":"agent_settled","aborted":false}

@@ -1,0 +1,7 @@
+{"id":"req-1","type":"response","command":"prompt","success":true,"data":{"disposition":"started"}}
+{"type":"agent_start"}
+{"type":"message_start","message":{"role":"assistant","content":[],"stopReason":"pending"}}
+{"type":"message_end","message":{"role":"assistant","content":[],"stopReason":"error","errorMessage":"401 Unauthorized: invalid api key","timestamp":1733234401001}}
+{"type":"auto_retry_start","attempt":1,"maxAttempts":3,"delayMs":2000,"errorMessage":"401 Unauthorized: invalid api key"}
+{"type":"auto_retry_end","success":false,"finalError":"401 Unauthorized: invalid api key"}
+{"type":"agent_settled","aborted":false}

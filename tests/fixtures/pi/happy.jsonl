@@ -1,0 +1,11 @@
+{"id":"req-1","type":"response","command":"prompt","success":true,"data":{"disposition":"started"}}
+{"type":"agent_start"}
+{"type":"turn_start"}
+{"type":"message_start","message":{"role":"user","content":"研究问题","timestamp":1733234401000}}
+{"type":"message_end","message":{"role":"user","content":"研究问题","timestamp":1733234401000}}
+{"type":"message_start","message":{"role":"assistant","content":[],"stopReason":"pending"}}
+{"type":"message_update","usage":{"input":10,"output":1,"totalTokens":11},"assistantMessageEvent":{"type":"text_delta","contentIndex":0,"delta":"研"}}
+{"type":"message_end","message":{"role":"assistant","content":[{"type":"text","text":"研究完成。\n\n```json\n{\"summary\": \"固定样例研究结论\", \"sources\": [\"arxiv:2401.00001\"]}\n```"}],"stopReason":"stop","timestamp":1733234401001}}
+{"type":"turn_end","message":{"role":"assistant","content":[{"type":"text","text":"研究完成。"}],"stopReason":"stop"},"toolResults":[]}
+{"type":"agent_end","messages":[{"role":"assistant","content":[{"type":"text","text":"研究完成。"}],"stopReason":"stop"}],"willRetry":false}
+{"type":"agent_settled","aborted":false}
