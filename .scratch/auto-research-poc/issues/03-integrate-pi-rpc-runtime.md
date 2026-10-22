@@ -1,7 +1,7 @@
 # 集成 Pi RPC Runtime
 
 Type: task
-Status: claimed
+Status: resolved
 Owner: Kimi
 Blocked by: 01, 02
 
