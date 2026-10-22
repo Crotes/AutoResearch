@@ -1,7 +1,8 @@
 # 建立 research-tools MCP Server
 
 Type: task
-Status: ready-for-agent
+Status: claimed
+Owner: Kimi
 Blocked by: 01, 03
 
 ## 目标
