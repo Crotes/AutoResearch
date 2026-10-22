@@ -30,10 +30,11 @@ Blocked by: 03, 04, 06
 
 - 2026-10-22：用户要求继续完成任务，Owner 由 Kimi 交接为 Codex；沿用 `feat/07-core-research-skills` 分支，不包含尚未合并的 PR #5。
 - 六个 Skill 采用统一输出信封与最小 Tool 白名单；`plan-research` 使用独立 `plan_confirmation` 人工闸门，确认前停止来源发现。
+- 2026-10-22：实现已提交并创建 PR #6，等待非作者评审与合并。
 
 ## Answer
 
-实现已完成，等待提交、PR 评审和合并后转为 `resolved`：
+实现已完成并提交至 PR #6，等待评审和合并后转为 `resolved`：
 
 - 建立 `plan-research`、`collect-sources`、`triage-sources`、`analyze-source`、`synthesize-topic` 和 `verify-evidence` 六个 1.0.0 Skill 包。
 - 每个包包含 ASCII `SKILL.md`、输入/输出 Schema、可验证样例、预期结果、变更记录和上游说明；原创 Skill 明确记录 Apache-2.0 与无第三方上游。
