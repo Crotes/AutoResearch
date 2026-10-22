@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "skills": [
+    {
+      "name": "plan-research",
+      "version": "1.0.0",
+      "allowed_tools": ["search_library", "request_human_review"]
+    },
+    {
+      "name": "collect-sources",
+      "version": "1.0.0",
+      "allowed_tools": ["discover_sources", "materialize_source"]
+    },
+    {
+      "name": "triage-sources",
+      "version": "1.0.0",
+      "allowed_tools": ["read_source_chunks", "submit_artifact", "request_human_review"]
+    },
+    {
+      "name": "analyze-source",
+      "version": "1.0.0",
+      "allowed_tools": ["read_source_chunks", "submit_artifact"]
+    },
+    {
+      "name": "synthesize-topic",
+      "version": "1.0.0",
+      "allowed_tools": ["read_source_chunks", "submit_artifact", "request_human_review"]
+    },
+    {
+      "name": "verify-evidence",
+      "version": "1.0.0",
+      "allowed_tools": ["read_source_chunks"]
+    }
+  ]
+}

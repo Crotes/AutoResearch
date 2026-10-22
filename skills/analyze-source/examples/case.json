@@ -1,0 +1,49 @@
+{
+  "input": {
+    "question": "Agent 如何通过经验反馈实现自进化？",
+    "work": {
+      "work_id": "work-2401.00001",
+      "title": "Self-Improving Language Models from Experience",
+      "source_version_ids": ["source-arxiv-2401.00001-v1"]
+    },
+    "selection_review": {
+      "gate": "source_selection",
+      "status": "approved",
+      "selected_work_ids": ["work-2401.00001"]
+    }
+  },
+  "output": {
+    "schema_version": "1.0",
+    "skill": { "name": "analyze-source", "version": "1.0.0" },
+    "markdown": "# 详细解读\n\n## 方法\n系统将任务经验写入记忆，并在后续迭代中用于反思与策略更新。\n\n## 局限\n摘要未给出跨领域长期评测。",
+    "structured": {
+      "work_id": "work-2401.00001",
+      "research_problem": "如何让模型从任务经验中持续改进。",
+      "method": "保存经验并通过反思更新后续策略。",
+      "experiments": "在摘要所列任务上与无经验基线比较。",
+      "results": "作者报告经验反馈带来性能提升。",
+      "limitations": ["当前材料未提供跨领域长期评测细节。"],
+      "applicability": "适合存在重复任务和可记录反馈的 Agent 场景。",
+      "reproducibility": "当前来源未确认公开代码，复现性待核验。",
+      "relation_to_question": "给出了经验收集到策略更新的闭环。"
+    },
+    "evidence": [
+      {
+        "claim_id": "method-1",
+        "claim": "系统保存经验并通过反思更新后续策略。",
+        "disposition": "supported",
+        "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-2"],
+        "rationale": "方法段直接描述经验记忆与反思步骤。"
+      },
+      {
+        "claim_id": "long-term-1",
+        "claim": "该方法已证明可长期跨领域稳定改进。",
+        "disposition": "rejected",
+        "evidence_ids": [],
+        "rationale": "已读取材料没有长期跨领域实验。"
+      }
+    ],
+    "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-2"],
+    "warnings": ["公开代码状态尚未核验；跨领域长期效果不能下结论。"]
+  }
+}

@@ -33,7 +33,7 @@ MAX_DISCOVER_LIMIT = 100
 MAX_SEARCH_LIMIT = 50
 MAX_CHUNK_LIMIT = 20
 
-DEFAULT_REVIEW_GATES = ("source_selection", "final_approval")
+DEFAULT_REVIEW_GATES = ("plan_confirmation", "source_selection", "final_approval")
 
 _EVIDENCE_ANCHOR = re.compile(r"^(?P<source_version_id>[^#]+)#chunk-(?P<index>\d+)(?:@page-\d+)?$")
 

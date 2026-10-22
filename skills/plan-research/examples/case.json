@@ -1,0 +1,52 @@
+{
+  "input": {
+    "question": "Agent 如何通过经验反馈实现自进化？",
+    "include_terms": ["agent self-evolution", "experience feedback"],
+    "exclude_terms": ["biological evolution"],
+    "languages": ["zh", "en"],
+    "source_kinds": ["arxiv", "github", "rss"],
+    "start_date": "2024-01-01",
+    "end_date": null,
+    "seed_urls": [],
+    "budget": { "max_candidates": 30, "max_queries": 6 }
+  },
+  "output": {
+    "schema_version": "1.0",
+    "skill": { "name": "plan-research", "version": "1.0.0" },
+    "markdown": "# 研究计划\n\n聚焦 Agent 从经验反馈中更新策略、记忆或工具使用方式。以下查询尚待人工确认。",
+    "structured": {
+      "plan": {
+        "question": "Agent 如何通过经验反馈实现自进化？",
+        "include_terms": ["agent self-evolution", "experience feedback"],
+        "exclude_terms": ["biological evolution"],
+        "languages": ["zh", "en"],
+        "source_kinds": ["arxiv", "github", "rss"],
+        "max_candidates": 30
+      },
+      "query_expansions": [
+        {
+          "query": "agent self-improvement experience feedback memory reflection",
+          "language": "en",
+          "rationale": "覆盖自我改进、经验记忆和反思三个常用表述。"
+        },
+        {
+          "query": "智能体 自我进化 经验反馈 反思 记忆",
+          "language": "zh",
+          "rationale": "补充中文研究与工程博客的常用关键词。"
+        }
+      ],
+      "review": { "gate": "plan_confirmation", "status": "pending" }
+    },
+    "evidence": [
+      {
+        "claim_id": "query-coverage-1",
+        "claim": "反思与记忆是该问题值得检索的扩展概念。",
+        "disposition": "inference",
+        "evidence_ids": [],
+        "rationale": "这是基于用户问题提出的检索假设，需人工确认后才能执行。"
+      }
+    ],
+    "evidence_ids": [],
+    "warnings": ["查询扩展尚未获得人工确认，不得开始来源发现。"]
+  }
+}

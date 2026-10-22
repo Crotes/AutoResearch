@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoresearch.local/skills/analyze-source/input.schema.json",
+  "title": "analyze-source input",
+  "type": "object",
+  "required": ["question", "work", "selection_review"],
+  "properties": {
+    "question": { "type": "string", "minLength": 1 },
+    "work": {
+      "type": "object",
+      "required": ["work_id", "title", "source_version_ids"],
+      "properties": {
+        "work_id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "source_version_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "selection_review": {
+      "type": "object",
+      "required": ["gate", "status", "selected_work_ids"],
+      "properties": {
+        "gate": { "const": "source_selection" },
+        "status": { "const": "approved" },
+        "selected_work_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

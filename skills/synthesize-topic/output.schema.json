@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoresearch.local/skills/synthesize-topic/output.schema.json",
+  "title": "synthesize-topic output",
+  "allOf": [
+    { "$ref": "https://autoresearch.local/skills/_shared/output-envelope.schema.json" },
+    {
+      "properties": {
+        "skill": {
+          "properties": {
+            "name": { "const": "synthesize-topic" },
+            "version": { "const": "1.0.0" }
+          }
+        },
+        "evidence_ids": { "minItems": 1 },
+        "structured": {
+          "type": "object",
+          "required": ["categories", "method_comparison", "consensus", "conflicts", "evidence_gaps", "research_gaps", "follow_up_questions", "review"],
+          "properties": {
+            "categories": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["name", "origin", "work_ids"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "origin": { "enum": ["predefined", "emergent"] },
+                  "work_ids": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+                },
+                "additionalProperties": false
+              }
+            },
+            "method_comparison": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "consensus": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "conflicts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "evidence_gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "research_gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "follow_up_questions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "review": {
+              "type": "object",
+              "required": ["gate", "status"],
+              "properties": {
+                "gate": { "const": "final_approval" },
+                "status": { "const": "pending" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

@@ -14,5 +14,5 @@
 - `agent_settled` 只表示当前 Pi 工作回合结束；Application 工作流随后进入选源或终审检查点，只有人工审核决定可以推动 ResearchRun 完成。
 - Windows 上通过 `shutil.which("pi")` 解析 `pi.cmd`（CreateProcess 不做 PATHEXT 查找）。
 - 模型接入：自定义端点配置在用户级 `~/.pi/agent/models.json`（注意是 `agent/` 子目录），`apiKey` 支持 `$ENV_VAR` 插值，凭据不写入仓库。
-- 项目级 `.agents/skills/` 需要 `--approve` 信任；测试与验收用 `--skill <dir>` 显式加载（`tests/fixtures/pi-skill-project/` 为最小 Skill 样例）。
+- 项目级 `.agents/skills/` 需要 `--approve` 信任；AutoResearch 的版本化事实源位于 `skills/`，运行时用 `--skill skills/<name>` 显式加载（`tests/fixtures/pi-skill-project/` 为最小 Skill 样例）。
 - 已知环境限制：Pi 在 Windows 上按系统代码页读取 Skill 文件，非 ASCII 内容会乱码，Skill 文件暂用英文书写。
