@@ -1,0 +1,2 @@
+# Store text files with LF in the repository; convert on checkout as needed.
+* text=auto eol=lf
