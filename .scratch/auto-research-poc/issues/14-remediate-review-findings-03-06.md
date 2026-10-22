@@ -34,10 +34,11 @@ Owner: Codex
 
 - 2026-10-22：建立目标回归环，初始结果为 `11 failed, 70 passed`，分别复现缓存越权、审核门绕过、重定向未复核、伪造证据、arXiv 身份碰撞、GitHub 不分页和 Application 反向依赖。
 - 任务 07 的未提交 Skill 目录与 `tools.py` 修改已按用户要求撤销；原 `feat/07-core-research-skills` 分支保留为历史指针，修复在 `fix/14-review-findings` 分支进行。
+- 2026-10-22：修复已提交并创建 PR #5，等待非作者评审与合并。
 
 ## Answer
 
-实现已完成，等待提交、PR 评审和合并后转为 `resolved`：
+实现已完成并提交至 PR #5，等待评审和合并后转为 `resolved`：
 
 - HTTP 支持按请求禁用缓存，并手动跟随、逐跳复核重定向；Manual URL 同时校验域名、字面 IP 与 DNS 解析结果。
 - metadata-only/controlled 来源不再把正文放入 `SourceDocument`，物化请求不缓存未知许可正文；GitHub 在确认开放许可证后才读取 README/Release。
