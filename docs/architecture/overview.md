@@ -31,6 +31,8 @@ Application
 
 SQLite 和本地文件系统是 PoC Adapter。模块接口不暴露其实现细节，以便内部 Alpha 替换为 PostgreSQL、对象存储和队列。
 
+research-tools MCP Server 已实现于 `src/autoresearch/adapters/mcp/`（stdlib stdio JSON-RPC，保持运行时零依赖），向 Skills 暴露六个受控 Tool；安全边界见 `tools/research_tools/README.md`。
+
 ## 深模块与 seam
 
 ### Workflow 模块
