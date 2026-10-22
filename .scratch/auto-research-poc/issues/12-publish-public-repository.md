@@ -24,3 +24,10 @@ Blocked by: 01, 10, 11
 - 当前本地问题跟踪配置已切换为 GitHub Issues
 
 ## Comments
+
+- 2026-10-22：部分范围已提前完成（未认领，仅记录进度）：
+  - Git 已初始化（默认分支 `main`），初始提交与 `.gitattributes`（统一 LF）已推送至公共仓库 `https://github.com/Crotes/AutoResearch`。
+  - 忽略规则复核通过：`.venv`、缓存、`.autoresearch/`、`data/`、`*.sqlite`、`.env`、`*.pem`/`*.key` 等均已排除，无私密文件进入仓库。
+  - GitHub 仓库已开启 Secret scanning 与 Push protection（API 验证：`enabled`/`enabled`）。
+  - `docs/collaboration.md` 已同步为启用分支/PR 并行协作。
+- 剩余范围（GitHub Issues/Projects 迁移、分支保护与 CI 门禁、CODEOWNERS、安全说明、第三方 Skill 许可复核）仍受任务 10、11 阻塞，任务保持未认领。
