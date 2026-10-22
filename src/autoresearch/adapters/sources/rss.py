@@ -106,12 +106,10 @@ class RssSource:
             access_policy=AccessPolicy.METADATA_ONLY,
             license=None,
         )
-        return SourceDocument(
-            source_version=version, media_type="text/plain", text=text, chunks=(text,)
-        )
+        return SourceDocument(source_version=version, media_type="text/plain", text="", chunks=())
 
     def _fetch_feed(self, feed_url: str) -> list[FeedItem]:
-        body = self._http.get(feed_url).body
+        body = self._http.get(feed_url, cache_response=False).body
         try:
             root = ET.fromstring(body)
         except ET.ParseError as error:

@@ -14,10 +14,12 @@ FIXTURES = Path(__file__).parents[1] / "fixtures" / "sources"
 FIXED_NOW = datetime(2024, 3, 1, tzinfo=UTC)
 
 
-def make_source(routes: dict, *, token: str | None = "") -> tuple[GitHubSource, FakeTransport]:
+def make_source(
+    routes: dict, *, token: str | None = "", per_page: int = 30
+) -> tuple[GitHubSource, FakeTransport]:
     transport = FakeTransport(routes)
     client = HttpClient(transport, requests_per_second=1000.0)
-    return GitHubSource(client, token=token, clock=lambda: FIXED_NOW), transport
+    return GitHubSource(client, token=token, clock=lambda: FIXED_NOW, per_page=per_page), transport
 
 
 def make_plan() -> ResearchPlan:
@@ -39,6 +41,22 @@ def test_discover_parses_search_results() -> None:
     assert first.metadata["license"] == "Apache-2.0"
     assert candidates[1].metadata["license"] is None
     assert "q=" in transport.requests[0].url
+
+
+def test_discover_follows_search_pages() -> None:
+    first = b'{"items":[{"full_name":"lab/one","html_url":"https://github.com/lab/one"}]}'
+    second = b'{"items":[{"full_name":"lab/two","html_url":"https://github.com/lab/two"}]}'
+    empty = b'{"items":[]}'
+    source, transport = make_source(
+        {f"{API_URL}/search/repositories": [ok(first), ok(second), ok(empty)]},
+        per_page=1,
+    )
+
+    candidates = list(source.discover(make_plan()))
+
+    assert [candidate.title for candidate in candidates] == ["lab/one", "lab/two"]
+    assert len(transport.requests) == 3
+    assert "page=2" in transport.requests[1].url
 
 
 def test_token_adds_authorization_header() -> None:
@@ -88,10 +106,12 @@ def test_materialize_without_release_or_license() -> None:
         f"{API_URL}/repos/lab/reflexion-notes/readme": status(404),
         f"{API_URL}/repos/lab/reflexion-notes/releases/latest": status(404),
     }
-    source, _ = make_source(routes)
+    source, transport = make_source(routes)
     document = source.materialize(
         SourceRef(kind=SourceKind.GITHUB, locator="github:lab/reflexion-notes")
     )
-    assert document.text == "Notes."
+    assert document.text == ""
+    assert document.chunks == ()
     assert document.source_version.access_policy is AccessPolicy.METADATA_ONLY
     assert document.source_version.license is None
+    assert len(transport.requests) == 1

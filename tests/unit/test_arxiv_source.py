@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from fake_http import FakeTransport, ok
 
-from autoresearch.adapters.sources.arxiv import API_URL, ArxivSource
+from autoresearch.adapters.sources.arxiv import API_URL, ArxivSource, arxiv_id_from_url
 from autoresearch.adapters.sources.http import HttpClient
 from autoresearch.domain import AccessPolicy, AutoResearchError, ErrorCategory, ResearchPlan
 from autoresearch.domain.models import SourceKind, SourceRef
@@ -71,6 +71,12 @@ def test_materialize_without_license_is_metadata_only() -> None:
     document = source.materialize(SourceRef(kind=SourceKind.ARXIV, locator="arxiv:2401.00002"))
     assert document.source_version.access_policy is AccessPolicy.METADATA_ONLY
     assert document.source_version.license is None
+    assert document.text == ""
+    assert document.chunks == ()
+
+
+def test_legacy_arxiv_category_keeps_v_inside_name() -> None:
+    assert arxiv_id_from_url("https://arxiv.org/abs/solv-int/9701001v2") == "solv-int/9701001"
 
 
 def test_materialize_unknown_id_is_permanent() -> None:

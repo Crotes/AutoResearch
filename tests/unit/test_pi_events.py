@@ -59,12 +59,11 @@ def fixture_kinds(name: str) -> list[EventKind]:
     return [event.kind for event in events]
 
 
-def test_happy_path_fixture_normalizes_to_completion() -> None:
+def test_happy_path_fixture_leaves_completion_to_workflow() -> None:
     kinds = fixture_kinds("happy.jsonl")
     assert kinds == [
         EventKind.STEP_STARTED,
         EventKind.ARTIFACT_CREATED,
-        EventKind.RUN_COMPLETED,
     ]
     events, _ = normalize_fixture("happy.jsonl")
     artifact = events[1]
@@ -76,13 +75,12 @@ def test_abort_fixture_normalizes_to_cancellation() -> None:
     assert fixture_kinds("abort.jsonl") == [EventKind.STEP_STARTED, EventKind.RUN_CANCELLED]
 
 
-def test_retry_fixture_emits_transient_failure_then_completion() -> None:
+def test_retry_fixture_emits_transient_failure_without_completing_workflow() -> None:
     kinds = fixture_kinds("retry-then-settle.jsonl")
     assert kinds == [
         EventKind.STEP_STARTED,
         EventKind.STEP_FAILED,
         EventKind.ARTIFACT_CREATED,
-        EventKind.RUN_COMPLETED,
     ]
     events, _ = normalize_fixture("retry-then-settle.jsonl")
     failure = events[1]
@@ -98,7 +96,6 @@ def test_invalid_json_fixture_yields_one_error_and_still_normalizes() -> None:
     assert [event.kind for event in events] == [
         EventKind.STEP_STARTED,
         EventKind.ARTIFACT_CREATED,
-        EventKind.RUN_COMPLETED,
     ]
 
 
@@ -106,14 +103,13 @@ def test_mid_exit_fixture_only_records_the_started_step() -> None:
     assert fixture_kinds("mid-exit.jsonl") == [EventKind.STEP_STARTED]
 
 
-def test_error_settle_fixture_emits_terminal_failures_before_completion() -> None:
+def test_error_settle_fixture_emits_terminal_failures_without_completion() -> None:
     kinds = fixture_kinds("error-settle.jsonl")
     assert kinds == [
         EventKind.STEP_STARTED,
         EventKind.STEP_FAILED,
         EventKind.STEP_FAILED,
         EventKind.STEP_FAILED,
-        EventKind.RUN_COMPLETED,
     ]
     events, _ = normalize_fixture("error-settle.jsonl")
     message_error = events[1]

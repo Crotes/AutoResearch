@@ -61,9 +61,15 @@ def make_context(**overrides: Any) -> ToolContext:
         ),
         "allowed_tools": frozenset(TOOL_DEFINITIONS),
         "allowed_domains": frozenset({"example.org"}),
+        "materialized_ids": {document.source_version.id},
     }
     defaults.update(overrides)
     return ToolContext(**defaults)
+
+
+def valid_evidence(context: ToolContext) -> str:
+    source_version_id = next(iter(context.materialized_ids))
+    return f"{source_version_id}#chunk-0"
 
 
 def call(context: ToolContext, tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -212,7 +218,7 @@ class TestSubmitArtifact:
                 "idempotency_key": "k1",
                 "kind": "overview",
                 "markdown": "# 概述",
-                "evidence_ids": ["source-1#chunk-1"],
+                "evidence_ids": [valid_evidence(context)],
             },
         )
         assert result["idempotent_replay"] is False
@@ -225,7 +231,7 @@ class TestSubmitArtifact:
             "idempotency_key": "k1",
             "kind": "overview",
             "markdown": "# 概述",
-            "evidence_ids": ["source-1#chunk-1"],
+            "evidence_ids": [valid_evidence(context)],
         }
         first = call(context, "submit_artifact", arguments)
         second = call(context, "submit_artifact", arguments)
@@ -246,6 +252,24 @@ class TestSubmitArtifact:
                 },
             )
         assert excinfo.value.failure.category is ErrorCategory.POLICY
+
+    def test_forged_or_foreign_evidence_is_rejected(self) -> None:
+        context = make_context()
+
+        with pytest.raises(ToolError) as excinfo:
+            call(
+                context,
+                "submit_artifact",
+                {
+                    "idempotency_key": "forged",
+                    "kind": "overview",
+                    "markdown": "# 概述",
+                    "evidence_ids": ["source-foreign#chunk-0"],
+                },
+            )
+
+        assert excinfo.value.failure.category is ErrorCategory.POLICY
+        assert context.artifacts.list("run-test") == ()
 
     def test_unknown_kind_and_missing_key_are_rejected(self) -> None:
         with pytest.raises(ToolError):

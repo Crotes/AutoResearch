@@ -12,6 +12,7 @@ from autoresearch.adapters.sources.http import HttpClient
 from autoresearch.adapters.sources.normalize import license_access_policy, normalize_arxiv_url
 from autoresearch.domain.errors import AutoResearchError, ErrorCategory, Failure
 from autoresearch.domain.models import (
+    AccessPolicy,
     Candidate,
     ResearchPlan,
     SourceDocument,
@@ -19,6 +20,7 @@ from autoresearch.domain.models import (
     SourceRef,
     SourceVersion,
 )
+from autoresearch.domain.urls import strip_arxiv_version
 
 API_URL = "https://export.arxiv.org/api/query"
 _ATOM = "{http://www.w3.org/2005/Atom}"
@@ -32,7 +34,7 @@ def _utc_now() -> datetime:
 
 
 def arxiv_id_from_url(value: str) -> str:
-    return value.rsplit("/abs/", 1)[-1].split("v")[0]
+    return strip_arxiv_version(value.rsplit("/abs/", 1)[-1])
 
 
 class ArxivSource:
@@ -71,7 +73,7 @@ class ArxivSource:
     def materialize(self, source_ref: SourceRef) -> SourceDocument:
         arxiv_id = source_ref.locator.removeprefix("arxiv:")
         url = f"{API_URL}?id_list={quote(arxiv_id)}"
-        entries = self._parse(self._http.get(url).body)
+        entries = self._parse(self._http.get(url, cache_response=False).body)
         if not entries:
             raise AutoResearchError(
                 Failure(
@@ -85,7 +87,7 @@ class ArxivSource:
         license_value = entry.findtext(f"{_ARXIV}license")
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
         version = SourceVersion(
-            id=f"arxiv-{arxiv_id}-{digest[:12]}",
+            id=f"arxiv-{arxiv_id.replace('/', '-')}-{digest[:12]}",
             work_id=arxiv_id,
             source_ref=source_ref,
             canonical_url=normalize_arxiv_url(self._text(entry, "id")),
@@ -94,6 +96,13 @@ class ArxivSource:
             access_policy=license_access_policy(license_value),
             license=license_value,
         )
+        if version.access_policy is not AccessPolicy.PERSIST:
+            return SourceDocument(
+                source_version=version,
+                media_type="text/plain",
+                text="",
+                chunks=(),
+            )
         return SourceDocument(
             source_version=version,
             media_type="text/plain",

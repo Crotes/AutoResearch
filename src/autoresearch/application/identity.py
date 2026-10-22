@@ -14,7 +14,7 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
-from autoresearch.adapters.sources.normalize import normalize_github_url
+from autoresearch.domain.urls import normalize_github_url, strip_arxiv_version
 
 _PUNCTUATION = re.compile(r"[^\w\s]", re.UNICODE)
 _WHITESPACE = re.compile(r"\s+")
@@ -34,7 +34,7 @@ def identity_key(signals: IdentitySignals) -> str:
     if signals.doi:
         return f"doi:{signals.doi.strip().lower()}"
     if signals.arxiv_id:
-        arxiv_id = signals.arxiv_id.strip().split("v")[0].lower()
+        arxiv_id = strip_arxiv_version(signals.arxiv_id).lower()
         return f"arxiv:{arxiv_id}"
     if signals.repo_url:
         return f"repo:{normalize_github_url(signals.repo_url)}"

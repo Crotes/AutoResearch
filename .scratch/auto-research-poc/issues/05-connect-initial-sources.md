@@ -1,7 +1,7 @@
 # 接入首批资料来源
 
 Type: task
-Status: claimed
+Status: resolved
 Owner: Kimi
 Blocked by: 01, 04
 
@@ -38,4 +38,4 @@ Blocked by: 01, 04
 - `pytest` 140 项通过（新增 45，全部离线运行，fixture 为人工构造样例）；Ruff 检查与格式检查通过；mypy strict 通过；`autoresearch demo` 正常。
 - 验收对照：四类来源统一 Candidate/SourceRef ✅；单源失败隔离 ✅；限流（transient）与不可重试（permanent/policy/content）可区分 ✅；网络集成测试全部经录制 fixture 离线运行 ✅。
 
-任务验收四条均满足，待 PR 评审合并后转为 `resolved`。
+任务验收四条均满足，PR #3 已合并，任务状态为 `resolved`。
