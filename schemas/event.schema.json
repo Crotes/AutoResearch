@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoresearch.local/schemas/event.schema.json",
+  "title": "DomainEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "run_id", "sequence", "kind", "occurred_at", "data"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "kind": {
+      "enum": [
+        "run.started",
+        "step.started",
+        "source.discovered",
+        "source.materialized",
+        "artifact.created",
+        "review.requested",
+        "step.failed",
+        "run.cancelled",
+        "run.completed"
+      ]
+    },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "data": { "type": "object" }
+  }
+}
+

@@ -1,0 +1,12 @@
+{
+  "id": "source-001",
+  "work_id": "work-001",
+  "kind": "arxiv",
+  "locator": "arXiv:2610.00001",
+  "canonical_url": "https://arxiv.org/abs/2610.00001",
+  "retrieved_at": "2026-10-22T10:05:00+08:00",
+  "content_hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "access_policy": "persist",
+  "license": "CC BY 4.0"
+}
+

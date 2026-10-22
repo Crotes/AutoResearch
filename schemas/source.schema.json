@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoresearch.local/schemas/source.schema.json",
+  "title": "SourceVersion",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "work_id", "kind", "locator", "canonical_url", "retrieved_at", "content_hash", "access_policy"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "work_id": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["arxiv", "github", "rss", "manual_url"] },
+    "locator": { "type": "string", "minLength": 1 },
+    "canonical_url": { "type": "string", "format": "uri" },
+    "retrieved_at": { "type": "string", "format": "date-time" },
+    "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "access_policy": { "enum": ["persist", "controlled", "metadata_only"] },
+    "license": { "type": ["string", "null"] }
+  }
+}
+

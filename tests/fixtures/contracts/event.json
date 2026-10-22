@@ -1,0 +1,11 @@
+{
+  "id": "event-001",
+  "run_id": "run-001",
+  "sequence": 0,
+  "kind": "run.started",
+  "occurred_at": "2026-10-22T10:00:00+08:00",
+  "data": {
+    "workflow_version": "1.0.0"
+  }
+}
+

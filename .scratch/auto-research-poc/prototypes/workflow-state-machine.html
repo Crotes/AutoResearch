@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AutoResearch 工作流状态原型（临时）</title>
+  <style>
+    :root { color-scheme: light; --ink:#16211c; --muted:#617068; --accent:#16734a; --bg:#f5f7f3; --card:#fff; --line:#dbe3dd; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 system-ui,"Microsoft YaHei",sans-serif; }
+    main { width:min(960px,92vw); margin:40px auto; }
+    h1 { margin-bottom:4px; }
+    .notice { color:var(--muted); max-width:760px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; margin:18px 0; }
+    .state-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+    .field { border-left:3px solid var(--accent); padding-left:10px; }
+    .field span { display:block; color:var(--muted); font-size:12px; }
+    button { border:1px solid var(--accent); color:var(--accent); background:white; border-radius:8px; padding:8px 12px; margin:4px; cursor:pointer; }
+    button:hover, button.active { background:var(--accent); color:white; }
+    .error { color:#a12d25; min-height:24px; }
+    .tabs { border-bottom:1px solid var(--line); margin-bottom:12px; }
+    .scenario { display:none; }
+    .scenario.active { display:block; }
+    ol button { margin-left:8px; }
+    code { background:#edf1ed; padding:2px 5px; border-radius:4px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>AutoResearch 工作流状态原型</h1>
+  <p class="notice"><strong>临时原型：</strong>验证两个问题：人工选择前能否严格阻止详细解读；工作步骤失败后能否保留最近检查点并安全恢复。页面不保存数据，也不是生产界面。</p>
+
+  <section class="card">
+    <h2>当前状态</h2>
+    <div id="state" class="state-grid"></div>
+    <p id="message" class="error"></p>
+  </section>
+
+  <section class="card">
+    <h2>自由操作</h2>
+    <div id="actions"></div>
+  </section>
+
+  <section class="card">
+    <h2>引导场景</h2>
+    <div class="tabs" id="tabs"></div>
+    <div id="scenarios"></div>
+  </section>
+</main>
+<script>
+  // 可移植的纯状态机：不访问 DOM，也不产生副作用。
+  const WorkflowMachine = (() => {
+    const initial = () => ({
+      status: "尚未开始", checkpoint: "无", selected: 0,
+      overviews: 0, analyses: 0, synthesis: false, finalApproved: false
+    });
+    function transition(state, action) {
+      const next = { ...state };
+      const fail = message => ({ state, error: message });
+      switch (action) {
+        case "start":
+          if (state.status !== "尚未开始") return fail("只有新运行可以启动。");
+          return { state: { ...next, status:"等待选择", checkpoint:"速览已就绪", overviews:3 } };
+        case "select":
+          if (state.status !== "等待选择" || state.checkpoint !== "速览已就绪") return fail("当前不在成果选择关卡。");
+          return { state: { ...next, status:"已暂停，可恢复", selected:2 } };
+        case "resume":
+          if (state.checkpoint === "速览已就绪" && state.selected === 0) return fail("必须先由人工选择成果，不能生成详细解读。");
+          if (state.checkpoint === "速览已就绪" && ["已暂停，可恢复","失败"].includes(state.status)) return { state:{ ...next, status:"等待最终审核", checkpoint:"分析已就绪", analyses:2, synthesis:true } };
+          if (state.checkpoint === "分析已就绪" && !state.finalApproved) return fail("必须先通过最终审核。");
+          if (state.checkpoint === "分析已就绪" && state.finalApproved) return { state:{ ...next, status:"已完成", checkpoint:"已完成" } };
+          return fail("当前状态不能恢复。");
+        case "fail":
+          if (state.checkpoint !== "速览已就绪" || state.selected === 0) return fail("此模拟失败只发生在详细解读步骤。");
+          return { state:{ ...next, status:"失败" } };
+        case "approve":
+          if (state.status !== "等待最终审核") return fail("当前不在最终审核关卡。");
+          return { state:{ ...next, status:"已暂停，可恢复", finalApproved:true } };
+        case "cancel":
+          if (["已完成","已取消"].includes(state.status)) return fail("终止状态不能再次取消。");
+          return { state:{ ...next, status:"已取消" } };
+        case "reset": return { state: initial() };
+        default: return fail("未知操作。");
+      }
+    }
+    return { initial, transition };
+  })();
+
+  const labels = { start:"启动运行", select:"人工选择 2 项", resume:"恢复运行", fail:"模拟步骤失败", approve:"最终审核通过", cancel:"取消运行", reset:"重置" };
+  const scenarios = [
+    { name:"正常闭环", note:"观察两个审核门是否都必须人工通过。", steps:["start","select","resume","approve","resume"] },
+    { name:"非法跳过", note:"启动后直接恢复，详细解读数量应保持为 0。", steps:["start","resume"] },
+    { name:"失败恢复", note:"选中成果后模拟中断；检查点不后退，随后恢复完成分析。", steps:["start","select","fail","resume"] }
+  ];
+  let state = WorkflowMachine.initial();
+  function dispatch(action) {
+    const result = WorkflowMachine.transition(state, action);
+    state = result.state;
+    render(result.error || `已执行：${labels[action]}`);
+  }
+  function render(message="") {
+    const fields = {
+      "运行状态":state.status, "最近检查点":state.checkpoint, "速览数":state.overviews,
+      "人工选中":state.selected, "详细解读数":state.analyses,
+      "分类总结":state.synthesis ? "已生成" : "未生成", "最终审核":state.finalApproved ? "已通过" : "未通过"
+    };
+    document.querySelector("#state").innerHTML = Object.entries(fields).map(([key,value]) => `<div class="field"><span>${key}</span><strong>${value}</strong></div>`).join("");
+    document.querySelector("#message").textContent = message;
+  }
+  document.querySelector("#actions").innerHTML = Object.entries(labels).map(([action,label]) => `<button data-action="${action}">${label}</button>`).join("");
+  document.querySelector("#actions").addEventListener("click", event => { if (event.target.dataset.action) dispatch(event.target.dataset.action); });
+  const tabs = document.querySelector("#tabs");
+  const panels = document.querySelector("#scenarios");
+  scenarios.forEach((scenario,index) => {
+    tabs.insertAdjacentHTML("beforeend", `<button data-tab="${index}">${scenario.name}</button>`);
+    panels.insertAdjacentHTML("beforeend", `<div class="scenario" data-panel="${index}"><p>${scenario.note}</p><ol>${scenario.steps.map(action => `<li>${labels[action]} <button data-step="${action}">执行</button></li>`).join("")}</ol></div>`);
+  });
+  function openTab(index) {
+    dispatch("reset");
+    document.querySelectorAll("[data-tab]").forEach(el => el.classList.toggle("active", el.dataset.tab == index));
+    document.querySelectorAll("[data-panel]").forEach(el => el.classList.toggle("active", el.dataset.panel == index));
+  }
+  tabs.addEventListener("click", event => { if (event.target.dataset.tab) openTab(event.target.dataset.tab); });
+  panels.addEventListener("click", event => { if (event.target.dataset.step) dispatch(event.target.dataset.step); });
+  openTab(0);
+</script>
+</body>
+</html>

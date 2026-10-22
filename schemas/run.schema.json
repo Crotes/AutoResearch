@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoresearch.local/schemas/run.schema.json",
+  "title": "ResearchRun",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "project_id", "status", "plan", "workflow_version", "created_at", "updated_at"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "project_id": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": ["pending", "running", "review_required", "paused", "completed", "failed", "cancelled"]
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["question", "include_terms", "languages", "source_kinds"],
+      "properties": {
+        "question": { "type": "string", "minLength": 1 },
+        "include_terms": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "exclude_terms": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "languages": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 2 } },
+        "source_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["arxiv", "github", "rss", "manual_url"] },
+          "uniqueItems": true
+        },
+        "start_date": { "type": ["string", "null"], "format": "date" },
+        "end_date": { "type": ["string", "null"], "format": "date" },
+        "seed_urls": { "type": "array", "items": { "type": "string", "format": "uri" } }
+      }
+    },
+    "workflow_version": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "checkpoint": { "type": ["string", "null"] }
+  }
+}
+
