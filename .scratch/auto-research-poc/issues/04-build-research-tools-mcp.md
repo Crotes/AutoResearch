@@ -1,7 +1,7 @@
 # 建立 research-tools MCP Server
 
 Type: task
-Status: claimed
+Status: resolved
 Owner: Kimi
 Blocked by: 01, 03
 
