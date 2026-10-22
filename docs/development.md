@@ -13,7 +13,7 @@ uv sync --extra dev --locked
 uv run autoresearch --version
 ```
 
-若本机全局 Python 环境存在冲突，可直接使用项目虚拟环境中的可执行文件，例如 `.venv\Scripts\pytest.exe`。运行数据默认写入 `.autoresearch/`，该目录不进入 Git。
+若本机全局 Python 环境存在冲突，可直接使用项目虚拟环境中的可执行文件，例如 `.venv\Scripts\pytest.exe`。运行数据默认写入 `.autoresearch/`，该目录不进入 Git。来源连接器的 HTTP 响应缓存默认写入 `.autoresearch/cache/`（TTL 24 小时，命中即离线可用）。
 
 ## 验证
 

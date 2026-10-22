@@ -47,6 +47,8 @@ research-tools MCP Server 已实现于 `src/autoresearch/adapters/mcp/`（stdlib
 
 隐藏各来源的认证、查询、分页、限流、缓存和许可规则。调用者只发现候选或物化来源文档。
 
+PoC 已实现四类连接器（`adapters/sources/`）：arXiv Atom API、GitHub REST（元数据/README/Release）、RSS/Atom 白名单、手动 URL；统一输出 `Candidate`/`SourceRef`，单源失败隔离，HTTP 层具备限流、退避重试与文件缓存，许可按 ADR-0005 映射访问策略。
+
 ### ContentProcessing 模块
 
 隐藏下载、格式检测、正文提取、规范化、分块、内容哈希和证据定位。

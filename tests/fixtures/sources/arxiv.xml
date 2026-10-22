@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <title>arXiv Query: agent self-evolution</title>
+  <entry>
+    <id>https://arxiv.org/abs/2401.00001v2</id>
+    <title>Self-Refining Language Agents</title>
+    <summary>  The agent reviews failed trajectories and rewrites its policy.
+Reflection improves success while adding inference cost. </summary>
+    <published>2024-01-01T00:00:00Z</published>
+    <author><name>Ada Lovelace</name></author>
+    <author><name>Alan Turing</name></author>
+    <arxiv:license>http://creativecommons.org/licenses/by/4.0/</arxiv:license>
+  </entry>
+  <entry>
+    <id>https://arxiv.org/abs/2401.00002v1</id>
+    <title>Memory for Long-Lived Agents</title>
+    <summary>Pruning and consolidating memories using task feedback.</summary>
+    <published>2024-01-02T00:00:00Z</published>
+    <author><name>Grace Hopper</name></author>
+  </entry>
+</feed>
