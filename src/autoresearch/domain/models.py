@@ -143,6 +143,7 @@ class ArtifactSubmission:
     warnings: tuple[str, ...]
     skill_name: str
     skill_version: str
+    dependency_artifact_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

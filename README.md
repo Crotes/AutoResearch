@@ -11,9 +11,10 @@ AutoResearch 是一个面向实验室内部使用的 Skill-first 研究资料收
 - 四类来源连接器：arXiv、GitHub、RSS/Atom 白名单和手动 URL，含分页、限流、重试、缓存与访问策略
 - 内容处理与成果身份解析：HTML/PDF/Markdown/纯文本、稳定证据锚点、成果级归并和人工纠错
 - 六个版本化核心研究 Skills，包含输入/输出契约、样例、证据判定、最小 Tool 白名单和三个人工审核请求点
+- `SqliteResearchLibrary`：SQLite 事务、FTS5 工件检索、内容寻址正文、幂等工件版本、追加式审核和来源删除后的派生失效
 - 离线 Fake 纵向切片：不连网、不连模型即可跑通完整流程并导出工件
 
-尚未实现：SQLite 持久化（任务 08）、完整 CLI（任务 09）和容器加固（任务 10）。任务全景见 `.scratch/auto-research-poc/issues/`。
+尚未实现：完整 CLI（任务 09）和容器加固（任务 10）。任务全景见 `.scratch/auto-research-poc/issues/`。
 
 ## 快速开始
 
@@ -51,7 +52,7 @@ Adapters ──────────┘   （fake / pi / mcp / library）
 
 - 依赖方向：`CLI → Application → Domain ← Adapters`；领域不依赖 Pi、MCP、SQLite、HTTP
 - 业务状态独立于 Runtime Session（ADR-0003）；研究成果身份与来源版本分离（ADR-0004）
-- 六条架构决策见 [docs/adr/](docs/adr/)，拓扑与深模块说明见 [docs/architecture/overview.md](docs/architecture/overview.md)
+- SQLite 资料库和内容寻址正文的事务/删除策略见 ADR-0007；其余架构决策见 [docs/adr/](docs/adr/)，拓扑与深模块说明见 [docs/architecture/overview.md](docs/architecture/overview.md)
 - 术语以 [GLOSSARY.md](GLOSSARY.md) 为准（含禁用同义词）
 
 ## 安全边界

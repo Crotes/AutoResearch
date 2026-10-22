@@ -43,11 +43,11 @@
         "claim_id": "overview-1",
         "claim": "该工作研究利用经验反馈迭代改进模型。",
         "disposition": "supported",
-        "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-0"],
+        "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-1"],
         "rationale": "摘要明确描述经验反馈与迭代改进。"
       }
     ],
-    "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-0"],
+    "evidence_ids": ["source-arxiv-2401.00001-v1#chunk-1"],
     "warnings": ["尚未核验代码仓库，复现性评分置信度较低。"]
   }
 }

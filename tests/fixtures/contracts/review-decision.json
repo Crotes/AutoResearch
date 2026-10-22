@@ -1,0 +1,11 @@
+{
+  "id": "review-1",
+  "run_id": "run-1",
+  "kind": "artifact",
+  "outcome": "approved",
+  "reviewer": "alice",
+  "comment": "Evidence is sufficient.",
+  "created_at": "2026-01-01T00:00:00Z",
+  "artifact_id": "artifact-1",
+  "supersedes_id": null
+}

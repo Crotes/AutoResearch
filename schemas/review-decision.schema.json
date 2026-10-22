@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoresearch.local/schemas/review-decision.schema.json",
+  "title": "Review decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "run_id", "kind", "outcome", "reviewer", "comment", "created_at"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["plan", "source", "artifact", "final"] },
+    "outcome": { "enum": ["approved", "rejected", "changes_requested"] },
+    "reviewer": { "type": "string", "minLength": 1 },
+    "comment": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "artifact_id": { "type": ["string", "null"] },
+    "supersedes_id": { "type": ["string", "null"] }
+  }
+}

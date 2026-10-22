@@ -35,7 +35,9 @@ MAX_CHUNK_LIMIT = 20
 
 DEFAULT_REVIEW_GATES = ("plan_confirmation", "source_selection", "final_approval")
 
-_EVIDENCE_ANCHOR = re.compile(r"^(?P<source_version_id>[^#]+)#chunk-(?P<index>\d+)(?:@page-\d+)?$")
+_EVIDENCE_ANCHOR = re.compile(
+    r"^(?P<source_version_id>[^#]+)#chunk-(?P<index>[1-9]\d*)(?:@page-\d+)?$"
+)
 
 
 def _noop_review(gate: str, message: str) -> None:
@@ -228,7 +230,7 @@ def materialize_source(context: ToolContext, arguments: dict[str, Any]) -> dict[
     context.on_materialized(document)
     return untrusted_envelope(
         document.source_version.id,
-        [{"index": index, "text": chunk} for index, chunk in enumerate(document.chunks)],
+        [{"index": index, "text": chunk} for index, chunk in enumerate(document.chunks, start=1)],
     )
 
 
@@ -288,23 +290,28 @@ def submit_artifact(context: ToolContext, arguments: dict[str, Any]) -> dict[str
         raise invalid_arguments("argument 'structured' must be an object")
     skill_name = optional_str(arguments, "skill_name") or "mcp-direct"
     skill_version = optional_str(arguments, "skill_version") or "0"
-
+    submission = ArtifactSubmission(
+        kind=kind,
+        work_id=work_id,
+        markdown=markdown,
+        structured=dict(structured or {}),
+        evidence_ids=evidence_ids,
+        warnings=warnings,
+        skill_name=skill_name,
+        skill_version=skill_version,
+    )
     replay = context.idempotency_keys.get(idempotency_key)
     if replay is not None:
         return {"artifact": replay, "idempotent_replay": True}
-    artifact = context.artifacts.submit(
-        context.run_id,
-        ArtifactSubmission(
-            kind=kind,
-            work_id=work_id,
-            markdown=markdown,
-            structured=dict(structured or {}),
-            evidence_ids=evidence_ids,
-            warnings=warnings,
-            skill_name=skill_name,
-            skill_version=skill_version,
-        ),
-    )
+    persistent_submit = getattr(context.artifacts, "submit_idempotent", None)
+    if callable(persistent_submit):
+        try:
+            artifact, was_replay = persistent_submit(context.run_id, idempotency_key, submission)
+        except ValueError as error:
+            raise policy_violation(str(error)) from error
+    else:
+        artifact = context.artifacts.submit(context.run_id, submission)
+        was_replay = False
     record = {
         "artifact_id": artifact.id,
         "run_id": artifact.run_id,
@@ -312,7 +319,7 @@ def submit_artifact(context: ToolContext, arguments: dict[str, Any]) -> dict[str
         "kind": str(artifact.submission.kind),
     }
     context.idempotency_keys[idempotency_key] = record
-    return {"artifact": record, "idempotent_replay": False}
+    return {"artifact": record, "idempotent_replay": was_replay}
 
 
 def request_human_review(context: ToolContext, arguments: dict[str, Any]) -> dict[str, Any]:
