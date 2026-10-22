@@ -1,7 +1,7 @@
 # 物化正文并解析成果身份
 
 Type: task
-Status: claimed
+Status: resolved
 Owner: Kimi
 Blocked by: 04, 05
 
