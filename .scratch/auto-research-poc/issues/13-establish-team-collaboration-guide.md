@@ -27,6 +27,7 @@ Owner: Codex
 ## Comments
 
 - 当前仓库尚未初始化 Git，因此文档明确区分“共享工作区顺序交接”和任务 12 完成后的“跨机器分支/PR 并行协作”。
+- 2026-10-22：Git 仓库已初始化并推送至 `https://github.com/Crotes/AutoResearch`（公开，已启用 Secret scanning 与 Push protection）。`docs/collaboration.md` 已改为启用分支/PR 并行协作；任务跟踪切换到 GitHub Issues、`CODEOWNERS` 与分支保护仍归任务 12。
 - 未创建 `CODEOWNERS`，因为 GitHub 组织与维护者账号尚未确定；该配置归入任务 12。
 
 ## Answer

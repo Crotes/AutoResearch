@@ -26,6 +26,7 @@ Blocked by: 01
 
 - 采用两个不可绕过的检查点：`overviews_ready` 等待人工选择，`analyses_ready` 等待最终批准。
 - 原型技能要求将 HTML 原型保存在单独的 throwaway Git 分支；当前仓库尚未初始化 Git，故临时原型保存在 `.scratch/auto-research-poc/prototypes/workflow-state-machine.html`，待任务 12 建库时再决定是否保留分支快照。
+- 2026-10-22：Git 仓库已初始化并推送至 `https://github.com/Crotes/AutoResearch`（main 分支含原型文件）。原型已随主分支进入历史，不再单独建 throwaway 分支；后续原型按原型技能要求使用独立分支。
 
 ## Answer
 

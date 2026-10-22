@@ -2,7 +2,7 @@
 
 本文件是任务认领、并行开发和文档同步的单一规则来源。当前使用 `.scratch/auto-research-poc/issues/`；发布公共仓库后按任务 12 的迁移结果切换到 GitHub Issues。
 
-当前目录尚未初始化 Git。任务 12 完成前，这套规则只支持同一共享工作区中的顺序开发与明确交接，不启用跨机器并行修改；Git 仓库、远端分支和 PR 建立后再启用完整并行流程。
+Git 仓库已初始化并推送至公共 GitHub 仓库（`https://github.com/Crotes/AutoResearch`），分支、跨机器同步与 PR 并行协作流程自 2026-10-22 起启用。任务 12 的剩余事项（GitHub Issues 迁移、分支保护、CI 门禁、CODEOWNERS）完成前，任务跟踪仍使用 `.scratch/auto-research-poc/issues/`，评审通过 PR 进行。
 
 ## 认领任务
 
