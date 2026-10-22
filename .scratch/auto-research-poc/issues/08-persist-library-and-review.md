@@ -1,7 +1,7 @@
 # 持久化资料库与审核记录
 
 Type: task
-Status: resolved
+Status: claimed
 Owner: Codex
 Blocked by: 01, 02, 06
 
@@ -34,4 +34,5 @@ Blocked by: 01, 02, 06
 - `PERSIST` 正文按 SHA-256 内容寻址写入本地目录，使用临时文件 + `fsync` + 原子替换；`CONTROLLED`/`METADATA_ONLY` 不写入正文。重复的来源种类、规范 URL 和内容哈希返回同一来源版本；Work identity key 具有唯一约束。
 - 工件提交在一个 `BEGIN IMMEDIATE` 事务中完成证据存在性验证、版本分配、证据/派生关系、幂等键和 FTS5 索引写入；重复幂等请求重放，载荷不同则拒绝。
 - 审核决定只追加并带 `sequence`/`supersedes_id`；删除来源采用 tombstone，移除正文、分块和来源索引，并递归把直接引用及派生工件标记为 `stale`，搜索默认排除失效工件。
-- 新增 SQLite、FTS、重启恢复、受控正文和失效传播测试；验证命令：`pytest --basetemp=.pytest-tmp`（191 passed）、`ruff check src tests`、`mypy src`。
+- 新增 SQLite、FTS、重启恢复、受控正文和失效传播测试；验证命令：`pytest --basetemp=.pytest-tmp`（192 passed）、`ruff check src tests`、`mypy src`。
+- PR：[#7](https://github.com/Crotes/AutoResearch/pull/7)。合并后再将状态更新为 `resolved`。
