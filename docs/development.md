@@ -39,7 +39,7 @@ uv run autoresearch demo --output .autoresearch/demo-export
 | 路径 | 职责 |
 | --- | --- |
 | `src/autoresearch/domain/` | 不依赖基础设施的领域记录、事件和错误 |
-| `src/autoresearch/application/` | 工作流与用例编排 |
+| `src/autoresearch/application/` | 工作流与用例编排；`application/content/` 为内容处理（格式检测、正文提取、规范化分块、证据锚点、访问策略闸），`application/identity.py` 为成果身份解析与人工纠错 |
 | `src/autoresearch/ports/` | Runtime、来源和工件等稳定接口 |
 | `src/autoresearch/adapters/` | 内存、Pi、SQLite 和网络等接口实现 |
 | `schemas/` | 跨进程和持久化边界的 JSON Schema |

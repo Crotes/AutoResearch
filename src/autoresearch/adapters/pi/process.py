@@ -161,7 +161,7 @@ class PiProcess:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait(timeout=kill_timeout)
-        for stream in (process.stdout, process.stderr):
+        for stream in (process.stdin, process.stdout, process.stderr):
             try:
                 if stream is not None:
                     stream.close()
