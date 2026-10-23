@@ -30,9 +30,10 @@ Blocked by: 01, 02, 06
 
 ## Answer
 
-- 新增 `SqliteResearchLibrary`、`ContentStore` 和版本化 SQLite migration：项目、运行、SkillVersion、Work identity、SourceVersion、Evidence、Artifact、ReviewDecision、幂等键和失效关系均持久化。
-- `PERSIST` 正文按 SHA-256 内容寻址写入本地目录，使用临时文件 + `fsync` + 原子替换；`CONTROLLED`/`METADATA_ONLY` 不写入正文。重复的来源种类、规范 URL 和内容哈希返回同一来源版本；Work identity key 具有唯一约束。
-- 工件提交在一个 `BEGIN IMMEDIATE` 事务中完成证据存在性验证、版本分配、证据/派生关系、幂等键和 FTS5 索引写入；重复幂等请求重放，载荷不同则拒绝。
-- 审核决定只追加并带 `sequence`/`supersedes_id`；删除来源采用 tombstone，移除正文、分块和来源索引，并递归把直接引用及派生工件标记为 `stale`，搜索默认排除失效工件。
-- 新增 SQLite、FTS、重启恢复、受控正文和失效传播测试；验证命令：`pytest --basetemp=.pytest-tmp`（192 passed）、`ruff check src tests`、`mypy src`。
-- PR：[#7](https://github.com/Crotes/AutoResearch/pull/7)。合并后再将状态更新为 `resolved`。
+- 新增 `SqliteResearchLibrary`、`ContentStore` 和版本化 SQLite migration：项目、运行及检查点、SkillVersion、Work identity、SourceVersion、Evidence、Artifact、ReviewDecision、来源选择、幂等键和失效关系均可在重启后恢复。
+- `PERSIST` 正文按 SHA-256 内容寻址写入本地目录，使用临时文件 + `fsync` + 原子替换；`CONTROLLED`/`METADATA_ONLY` 不写入正文，后续升级为 `PERSIST` 会同步访问策略和正文。共享 identity key 的不同 URL 归并为同一 Work。
+- 工件先按产出 Skill 的 `output.schema.json` 做运行时校验，再在一个 `BEGIN IMMEDIATE` 事务中完成证据存在性验证、版本分配、证据/派生关系、幂等键和 FTS5 索引写入；重复幂等请求重放，载荷不同则拒绝。
+- 审核决定只追加并带 `sequence`/`supersedes_id`；删除来源采用 tombstone，移除正文、分块和来源索引，并递归把直接引用及派生工件标记为 `stale`。搜索排除失效工件，失效工件也不能继续作为新工件依赖。
+- SQLite 连接允许 MCP 线程池进入，并由 Adapter 锁串行化同一连接的事务与查询；真实 `tools/call` 集成测试覆盖物化来源、提交工件和资料库检索。
+- 验证命令：`pytest --basetemp=.pytest-tmp`（201 passed）、`ruff check src tests`、`ruff format --check src tests`、`mypy src`。
+- 原实现 PR：[#7](https://github.com/Crotes/AutoResearch/pull/7)；审查修复 PR：[#8](https://github.com/Crotes/AutoResearch/pull/8)。修复 PR 合并后再将状态更新为 `resolved`。

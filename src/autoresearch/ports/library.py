@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
-from autoresearch.domain.library import ReviewDecision
+from autoresearch.domain.library import ArtifactValidity, ReviewDecision
 from autoresearch.domain.models import ArtifactKind, SourceDocument
 
 
@@ -19,7 +19,7 @@ class LibraryEntry:
     title: str
     summary: str
     work_id: str | None = None
-    validity: str = "valid"
+    validity: ArtifactValidity = ArtifactValidity.VALID
 
 
 @dataclass(frozen=True, slots=True)

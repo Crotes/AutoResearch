@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import sqlite3
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def migrate(connection: sqlite3.Connection) -> None:
@@ -104,7 +104,24 @@ def migrate(connection: sqlite3.Connection) -> None:
     )
     from datetime import UTC, datetime
 
+    applied_at = datetime.now(UTC).isoformat()
     connection.execute(
-        "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
-        (SCHEMA_VERSION, datetime.now(UTC).isoformat()),
+        "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)",
+        (1, applied_at),
+    )
+    columns = {str(row[1]) for row in connection.execute("PRAGMA table_info(runs)").fetchall()}
+    if "checkpoint" not in columns:
+        connection.execute("ALTER TABLE runs ADD COLUMN checkpoint TEXT")
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS review_decision_works (
+          review_id TEXT NOT NULL REFERENCES review_decisions(id) ON DELETE CASCADE,
+          work_id TEXT NOT NULL REFERENCES works(id),
+          PRIMARY KEY(review_id, work_id)
+        )
+        """
+    )
+    connection.execute(
+        "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)",
+        (2, applied_at),
     )

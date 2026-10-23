@@ -11,6 +11,7 @@ import hashlib
 import json
 import re
 import sqlite3
+import threading
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import asdict
@@ -20,6 +21,10 @@ from uuid import uuid4
 
 from autoresearch.adapters.sqlite.connection import open_database
 from autoresearch.adapters.sqlite.content import ContentStore
+from autoresearch.application.artifacts import (
+    ArtifactSubmissionValidator,
+    JsonSchemaSkillOutputValidator,
+)
 from autoresearch.domain.library import (
     ArtifactValidity,
     ResearchProject,
@@ -36,7 +41,11 @@ from autoresearch.domain.models import (
     ArtifactSubmission,
     ResearchPlan,
     ResearchRun,
+    RunStatus,
     SourceDocument,
+    SourceKind,
+    SourceRef,
+    SourceVersion,
 )
 from autoresearch.ports.library import LibraryChunk, LibraryEntry
 
@@ -80,6 +89,20 @@ def _plan_json(plan: ResearchPlan) -> str:
     )
 
 
+def _plan_from_json(payload: str) -> ResearchPlan:
+    data = json.loads(payload)
+    return ResearchPlan(
+        question=data["question"],
+        include_terms=tuple(data["include_terms"]),
+        exclude_terms=tuple(data["exclude_terms"]),
+        languages=tuple(data["languages"]),
+        source_kinds=tuple(SourceKind(value) for value in data["source_kinds"]),
+        start_date=data["start_date"],
+        end_date=data["end_date"],
+        seed_urls=tuple(data["seed_urls"]),
+    )
+
+
 def _artifact_request_hash(run_id: str, submission: ArtifactSubmission) -> str:
     payload = {"run_id": run_id, **asdict(submission), "kind": str(submission.kind)}
     return hashlib.sha256(_json(payload).encode("utf-8")).hexdigest()
@@ -93,14 +116,22 @@ class SqliteResearchLibrary:
     later PostgreSQL adapter can implement the same seam.
     """
 
-    def __init__(self, database: str | Path, content_root: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        database: str | Path,
+        content_root: str | Path | None = None,
+        artifact_validator: ArtifactSubmissionValidator | None = None,
+    ) -> None:
         self.database_path = str(database)
         root = Path(content_root) if content_root is not None else Path(str(database) + ".content")
         self.content = ContentStore(root)
         self.connection = open_database(database)
+        self._lock = threading.RLock()
+        self._artifact_validator = artifact_validator or JsonSchemaSkillOutputValidator()
 
     def close(self) -> None:
-        self.connection.close()
+        with self._lock:
+            self.connection.close()
 
     def __enter__(self) -> SqliteResearchLibrary:
         return self
@@ -110,14 +141,15 @@ class SqliteResearchLibrary:
 
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Connection]:
-        self.connection.execute("BEGIN IMMEDIATE")
-        try:
-            yield self.connection
-        except BaseException:
-            self.connection.rollback()
-            raise
-        else:
-            self.connection.commit()
+        with self._lock:
+            self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                yield self.connection
+            except BaseException:
+                self.connection.rollback()
+                raise
+            else:
+                self.connection.commit()
 
     # -- project/run/skill/work/source -------------------------------------
 
@@ -129,6 +161,15 @@ class SqliteResearchLibrary:
                 (project.id, project.name, project.description),
             )
         return project
+
+    def get_project(self, project_id: str) -> ResearchProject:
+        with self._lock:
+            row = self.connection.execute(
+                "SELECT id,name,description FROM projects WHERE id=?", (project_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown project: {project_id}")
+        return ResearchProject(id=row["id"], name=row["name"], description=row["description"])
 
     def save_skill_version(self, skill: SkillVersion) -> SkillVersion:
         with self._transaction() as db:
@@ -148,9 +189,10 @@ class SqliteResearchLibrary:
                 (run.project_id, run.project_id),
             )
             db.execute(
-                "INSERT INTO runs(id,project_id,status,plan_json,workflow_version,created_at,updated_at) "
-                "VALUES (?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status, "
-                "plan_json=excluded.plan_json, workflow_version=excluded.workflow_version, updated_at=excluded.updated_at",
+                "INSERT INTO runs(id,project_id,status,plan_json,workflow_version,created_at,updated_at,checkpoint) "
+                "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status, "
+                "plan_json=excluded.plan_json, workflow_version=excluded.workflow_version, "
+                "updated_at=excluded.updated_at, checkpoint=excluded.checkpoint",
                 (
                     run.id,
                     run.project_id,
@@ -159,6 +201,7 @@ class SqliteResearchLibrary:
                     run.workflow_version,
                     _stamp(run.created_at),
                     _stamp(run.updated_at),
+                    run.checkpoint,
                 ),
             )
             for skill in skill_versions:
@@ -174,42 +217,92 @@ class SqliteResearchLibrary:
                 )
         return run
 
+    def get_run(self, run_id: str) -> ResearchRun:
+        with self._lock:
+            row = self.connection.execute("SELECT * FROM runs WHERE id=?", (run_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"unknown run: {run_id}")
+        return ResearchRun(
+            id=row["id"],
+            project_id=row["project_id"],
+            status=RunStatus(row["status"]),
+            plan=_plan_from_json(row["plan_json"]),
+            workflow_version=row["workflow_version"],
+            created_at=_time(row["created_at"]),
+            updated_at=_time(row["updated_at"]),
+            checkpoint=row["checkpoint"],
+        )
+
     def save_work(self, work: Work) -> Work:
         metadata = work.metadata or {}
         with self._transaction() as db:
-            db.execute(
-                "INSERT INTO works(id,title,metadata_json) VALUES (?,?,?) "
-                "ON CONFLICT(id) DO UPDATE SET title=excluded.title, metadata_json=excluded.metadata_json",
-                (work.id, work.title, _json(metadata)),
-            )
+            existing_work_ids: set[str] = set()
             for identity_key in work.identity_keys:
                 existing = db.execute(
                     "SELECT work_id FROM work_identity_keys WHERE identity_key=?", (identity_key,)
                 ).fetchone()
-                if existing is not None and existing[0] != work.id:
-                    raise ValueError(f"identity key already belongs to work {existing[0]!r}")
+                if existing is not None:
+                    existing_work_ids.add(str(existing[0]))
+            if len(existing_work_ids) > 1:
+                raise ValueError("identity keys resolve to different works; merge them explicitly")
+            canonical_id = next(iter(existing_work_ids), work.id)
+            if canonical_id == work.id:
                 db.execute(
-                    "INSERT INTO work_identity_keys(identity_key,work_id) VALUES (?,?) ON CONFLICT(identity_key) DO NOTHING",
-                    (identity_key, work.id),
+                    "INSERT INTO works(id,title,metadata_json) VALUES (?,?,?) "
+                    "ON CONFLICT(id) DO UPDATE SET title=excluded.title, "
+                    "metadata_json=excluded.metadata_json",
+                    (canonical_id, work.title, _json(metadata)),
                 )
-        return work
+            for identity_key in work.identity_keys:
+                db.execute(
+                    "INSERT INTO work_identity_keys(identity_key,work_id) VALUES (?,?) "
+                    "ON CONFLICT(identity_key) DO NOTHING",
+                    (identity_key, canonical_id),
+                )
+        return self.get_work(canonical_id)
+
+    def get_work(self, work_id: str) -> Work:
+        with self._lock:
+            row = self.connection.execute(
+                "SELECT id,title,metadata_json FROM works WHERE id=?", (work_id,)
+            ).fetchone()
+            keys = self.connection.execute(
+                "SELECT identity_key FROM work_identity_keys WHERE work_id=? ORDER BY identity_key",
+                (work_id,),
+            ).fetchall()
+        if row is None:
+            raise KeyError(f"unknown work: {work_id}")
+        metadata = json.loads(row["metadata_json"])
+        return Work(
+            id=row["id"],
+            title=row["title"],
+            identity_keys=tuple(str(item[0]) for item in keys),
+            metadata=metadata or None,
+        )
 
     def resolve_work(self, identity_key: str) -> str | None:
-        row = self.connection.execute(
-            "SELECT work_id FROM work_identity_keys WHERE identity_key=?", (identity_key,)
-        ).fetchone()
+        with self._lock:
+            row = self.connection.execute(
+                "SELECT work_id FROM work_identity_keys WHERE identity_key=?", (identity_key,)
+            ).fetchone()
         return None if row is None else str(row[0])
 
     def save_source(self, document: SourceDocument) -> str:
         source = document.source_version
         with self._transaction() as db:
             existing = db.execute(
-                "SELECT id,access_policy FROM source_versions "
+                "SELECT id,access_policy,deleted_at FROM source_versions "
                 "WHERE source_kind=? AND canonical_url=? AND content_hash=?",
                 (str(source.source_ref.kind), source.canonical_url, source.content_hash),
             ).fetchone()
             source_id = str(existing[0]) if existing is not None else source.id
             existing_policy = AccessPolicy(existing[1]) if existing is not None else None
+            if (
+                existing_policy is AccessPolicy.PERSIST
+                and source.access_policy is not AccessPolicy.PERSIST
+                and existing[2] is None
+            ):
+                return source_id
             persist_body = (
                 source.access_policy is AccessPolicy.PERSIST
                 or existing_policy is AccessPolicy.PERSIST
@@ -222,7 +315,10 @@ class SqliteResearchLibrary:
             )
             db.execute(
                 "INSERT INTO source_versions(id,work_id,source_kind,locator,canonical_url,retrieved_at,content_hash,access_policy,license,media_type,blob_hash,deleted_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL) ON CONFLICT(id) DO UPDATE SET deleted_at=NULL, blob_hash=excluded.blob_hash",
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL) ON CONFLICT(id) DO UPDATE SET "
+                "retrieved_at=excluded.retrieved_at, access_policy=excluded.access_policy, "
+                "license=excluded.license, media_type=excluded.media_type, "
+                "deleted_at=NULL, blob_hash=excluded.blob_hash",
                 (
                     source_id,
                     source.work_id,
@@ -250,6 +346,25 @@ class SqliteResearchLibrary:
                         (source_id, index, text),
                     )
         return source_id
+
+    def get_source(self, source_version_id: str) -> SourceVersion:
+        with self._lock:
+            row = self.connection.execute(
+                "SELECT * FROM source_versions WHERE id=? AND deleted_at IS NULL",
+                (source_version_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown or deleted source version: {source_version_id}")
+        return SourceVersion(
+            id=row["id"],
+            work_id=row["work_id"],
+            source_ref=SourceRef(kind=SourceKind(row["source_kind"]), locator=row["locator"]),
+            canonical_url=row["canonical_url"],
+            retrieved_at=_time(row["retrieved_at"]),
+            content_hash=row["content_hash"],
+            access_policy=AccessPolicy(row["access_policy"]),
+            license=row["license"],
+        )
 
     # -- artifacts and evidence -------------------------------------------
 
@@ -294,6 +409,7 @@ class SqliteResearchLibrary:
         request_hash: str | None,
     ) -> tuple[Artifact, bool]:
         self._validate_submission(submission)
+        self._artifact_validator.validate(submission)
         now = _now()
         with self._transaction() as db:
             if idempotency_key is not None and request_hash is not None:
@@ -359,9 +475,13 @@ class SqliteResearchLibrary:
                     (artifact_id, evidence_id),
                 )
             for dependency in submission.dependency_artifact_ids:
-                exists = db.execute("SELECT 1 FROM artifacts WHERE id=?", (dependency,)).fetchone()
-                if exists is None:
+                dependency_row = db.execute(
+                    "SELECT validity FROM artifacts WHERE id=?", (dependency,)
+                ).fetchone()
+                if dependency_row is None:
                     raise ValueError(f"dependency artifact does not exist: {dependency}")
+                if ArtifactValidity(dependency_row[0]) is not ArtifactValidity.VALID:
+                    raise ValueError(f"dependency artifact is stale: {dependency}")
                 db.execute(
                     "INSERT INTO artifact_dependencies(artifact_id,depends_on_artifact_id) VALUES (?,?)",
                     (artifact_id, dependency),
@@ -411,12 +531,14 @@ class SqliteResearchLibrary:
         )
 
     def get_artifact(self, artifact_id: str) -> Artifact:
-        return self._artifact_by_id(self.connection, artifact_id)
+        with self._lock:
+            return self._artifact_by_id(self.connection, artifact_id)
 
     def artifact_validity(self, artifact_id: str) -> ArtifactValidity:
-        row = self.connection.execute(
-            "SELECT validity FROM artifacts WHERE id=?", (artifact_id,)
-        ).fetchone()
+        with self._lock:
+            row = self.connection.execute(
+                "SELECT validity FROM artifacts WHERE id=?", (artifact_id,)
+            ).fetchone()
         if row is None:
             raise KeyError(f"unknown artifact: {artifact_id}")
         return ArtifactValidity(row[0])
@@ -430,12 +552,13 @@ class SqliteResearchLibrary:
         if not terms:
             return ()
         match_query = " AND ".join(f'"{term.replace(chr(34), "")}"' for term in terms)
-        rows = self.connection.execute(
-            "SELECT a.id,a.run_id,a.kind,a.work_id,f.title,f.summary,a.validity FROM artifacts_fts f "
-            "JOIN artifacts a ON a.id=f.artifact_id WHERE a.validity='valid' AND artifacts_fts MATCH ? "
-            "ORDER BY a.created_at DESC LIMIT ?",
-            (match_query, limit),
-        ).fetchall()
+        with self._lock:
+            rows = self.connection.execute(
+                "SELECT a.id,a.run_id,a.kind,a.work_id,f.title,f.summary,a.validity FROM artifacts_fts f "
+                "JOIN artifacts a ON a.id=f.artifact_id WHERE a.validity='valid' AND artifacts_fts MATCH ? "
+                "ORDER BY a.created_at DESC LIMIT ?",
+                (match_query, limit),
+            ).fetchall()
         return tuple(
             LibraryEntry(
                 artifact_id=row["id"],
@@ -444,7 +567,7 @@ class SqliteResearchLibrary:
                 title=row["title"],
                 summary=row["summary"],
                 work_id=row["work_id"],
-                validity=row["validity"],
+                validity=ArtifactValidity(row["validity"]),
             )
             for row in rows
         )
@@ -455,17 +578,20 @@ class SqliteResearchLibrary:
         if limit <= 0:
             return ()
         first = max(start, 1)
-        rows = self.connection.execute(
-            "SELECT chunk_index,text FROM source_chunks WHERE source_version_id=? AND chunk_index>=? "
-            "AND EXISTS (SELECT 1 FROM source_versions WHERE id=? AND deleted_at IS NULL) "
-            "ORDER BY chunk_index LIMIT ?",
-            (source_version_id, first, source_version_id, limit),
-        ).fetchall()
-        if not rows:
-            exists = self.connection.execute(
-                "SELECT 1 FROM source_versions WHERE id=? AND deleted_at IS NULL",
-                (source_version_id,),
-            ).fetchone()
+        with self._lock:
+            rows = self.connection.execute(
+                "SELECT chunk_index,text FROM source_chunks WHERE source_version_id=? AND chunk_index>=? "
+                "AND EXISTS (SELECT 1 FROM source_versions WHERE id=? AND deleted_at IS NULL) "
+                "ORDER BY chunk_index LIMIT ?",
+                (source_version_id, first, source_version_id, limit),
+            ).fetchall()
+            if not rows:
+                exists = self.connection.execute(
+                    "SELECT 1 FROM source_versions WHERE id=? AND deleted_at IS NULL",
+                    (source_version_id,),
+                ).fetchone()
+            else:
+                exists = True
             if exists is None:
                 raise KeyError(f"unknown or deleted source version: {source_version_id}")
         return tuple(
@@ -497,12 +623,27 @@ class SqliteResearchLibrary:
                     int(row[0]),
                 ),
             )
+            for work_id in decision.work_ids:
+                db.execute(
+                    "INSERT INTO review_decision_works(review_id,work_id) VALUES (?,?)",
+                    (decision.id, work_id),
+                )
         return decision
 
     def list_reviews(self, run_id: str) -> tuple[ReviewDecision, ...]:
-        rows = self.connection.execute(
-            "SELECT * FROM review_decisions WHERE run_id=? ORDER BY sequence", (run_id,)
-        ).fetchall()
+        with self._lock:
+            rows = self.connection.execute(
+                "SELECT * FROM review_decisions WHERE run_id=? ORDER BY sequence", (run_id,)
+            ).fetchall()
+            work_rows = self.connection.execute(
+                "SELECT rw.review_id,rw.work_id FROM review_decision_works rw "
+                "JOIN review_decisions r ON r.id=rw.review_id WHERE r.run_id=? "
+                "ORDER BY rw.review_id,rw.work_id",
+                (run_id,),
+            ).fetchall()
+        work_ids: dict[str, list[str]] = {}
+        for item in work_rows:
+            work_ids.setdefault(str(item[0]), []).append(str(item[1]))
         return tuple(
             ReviewDecision(
                 id=row["id"],
@@ -514,6 +655,7 @@ class SqliteResearchLibrary:
                 created_at=_time(row["created_at"]),
                 artifact_id=row["artifact_id"],
                 supersedes_id=row["supersedes_id"],
+                work_ids=tuple(work_ids.get(str(row["id"]), ())),
             )
             for row in rows
         )
@@ -569,10 +711,11 @@ class SqliteResearchLibrary:
                     (deleted_blob, now),
                 )
         if deleted_blob is not None:
-            still_used = self.connection.execute(
-                "SELECT 1 FROM source_versions WHERE blob_hash=? AND deleted_at IS NULL LIMIT 1",
-                (deleted_blob,),
-            ).fetchone()
+            with self._lock:
+                still_used = self.connection.execute(
+                    "SELECT 1 FROM source_versions WHERE blob_hash=? AND deleted_at IS NULL LIMIT 1",
+                    (deleted_blob,),
+                ).fetchone()
             if still_used is None:
                 self.content.delete(deleted_blob)
                 with self._transaction() as db:

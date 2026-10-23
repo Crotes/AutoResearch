@@ -17,7 +17,9 @@ uv run autoresearch --version
 
 `SqliteResearchLibrary` 接受一个 SQLite 文件路径和可选的正文目录路径。SQLite 文件保存业务状态、证据关系、审核决定和 FTS5 索引；`AccessPolicy.PERSIST` 的正文写入内容寻址目录，`CONTROLLED`/`METADATA_ONLY` 不写入正文。资料目录和 SQLite 文件应放在 `.autoresearch/` 或其他未纳入 Git 的实验数据目录。
 
-来源删除是可审计的 tombstone 操作：来源、历史工件和审核决定保留，正文/分块/来源索引移除，直接引用及其派生工件变为 `stale`。工件提交、证据校验、版本分配和 FTS 更新在一个 SQLite 事务中完成。
+来源删除是可审计的 tombstone 操作：来源、历史工件和审核决定保留，正文/分块/来源索引移除，直接引用及其派生工件变为 `stale`。失效工件不会出现在默认检索中，也不能作为新工件的依赖。工件提交先以对应 Skill 的版本化 JSON Schema 校验，再把证据校验、版本分配和 FTS 更新放在一个 SQLite 事务中完成。
+
+SQLite 连接允许由 MCP 线程池进入，但 `SqliteResearchLibrary` 会以进程内锁串行化同一连接上的事务和查询。该模型面向单进程、低并发 PoC；不要在多个进程间共享同一个 Adapter 实例。
 
 若本机全局 Python 环境存在冲突，可直接使用项目虚拟环境中的可执行文件，例如 `.venv\Scripts\pytest.exe`。运行数据默认写入 `.autoresearch/`，该目录不进入 Git。来源连接器的 HTTP 响应缓存默认写入 `.autoresearch/cache/`（TTL 24 小时，命中即离线可用）。
 

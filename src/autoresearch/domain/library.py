@@ -64,6 +64,7 @@ class ReviewDecision:
     created_at: datetime
     artifact_id: str | None = None
     supersedes_id: str | None = None
+    work_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

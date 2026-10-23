@@ -54,7 +54,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[^#]+#chunk-[0-9]+(?:@page-[0-9]+)?$"
+            "pattern": "^[^#]+#chunk-[1-9][0-9]*(?:@page-[0-9]+)?$"
           },
           "uniqueItems": true
         },
