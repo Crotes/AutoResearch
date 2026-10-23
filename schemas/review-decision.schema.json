@@ -14,6 +14,7 @@
     "comment": { "type": "string" },
     "created_at": { "type": "string", "format": "date-time" },
     "artifact_id": { "type": ["string", "null"] },
-    "supersedes_id": { "type": ["string", "null"] }
+    "supersedes_id": { "type": ["string", "null"] },
+    "work_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
   }
 }

@@ -31,7 +31,7 @@ Application
 
  SQLite 和本地文件系统是 PoC Adapter。`SqliteResearchLibrary` 保存项目、运行、成果、来源版本、证据、工件和审核决定；FTS5 提供工件检索，正文按访问策略写入内容寻址目录。模块接口不暴露其实现细节，以便内部 Alpha 替换为 PostgreSQL、对象存储和队列。
 
-research-tools MCP Server 已实现于 `src/autoresearch/adapters/mcp/`（stdlib stdio JSON-RPC，保持运行时零依赖），向 Skills 暴露六个受控 Tool；安全边界见 `tools/research_tools/README.md`。
+research-tools MCP Server 已实现于 `src/autoresearch/adapters/mcp/`（stdlib stdio JSON-RPC），向 Skills 暴露六个受控 Tool；工件提交使用 `jsonschema` 校验对应 Skill 的版本化输出契约，安全边界见 `tools/research_tools/README.md`。
 
 ## 深模块与 seam
 
@@ -57,11 +57,11 @@ PoC 已实现于 `application/content/`：HTML/PDF/Markdown/纯文本检测（PD
 
 ### ResearchLibrary 模块
 
-负责成果身份、来源版本、工件版本、审核记录、索引与派生失效。
+负责成果身份、来源版本、工件版本、审核记录、索引与派生失效。公开读取 seam 可在进程重启后重建项目、运行（含检查点）、成果、来源、工件及审核选择；SQLite 连接由 Adapter 串行化访问，可安全承接 MCP 的线程池调用。
 
 ### ArtifactSubmission 模块
 
-验证 Agent 的结构化输出，拒绝非法或缺少证据的工件，并在事务中写入资料库。
+按产出 Skill 的 `output.schema.json` 验证 Agent 结构化输出，拒绝非法、缺少证据或依赖失效工件的提交，并在事务中写入资料库。
 
 ## 依赖方向
 
