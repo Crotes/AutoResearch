@@ -1,7 +1,7 @@
 # 持久化资料库与审核记录
 
 Type: task
-Status: claimed
+Status: resolved
 Owner: Codex
 Blocked by: 01, 02, 06
 

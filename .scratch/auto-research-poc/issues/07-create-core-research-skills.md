@@ -1,7 +1,7 @@
 # 创建核心研究 Skills
 
 Type: task
-Status: claimed
+Status: resolved
 Owner: Codex
 Blocked by: 03, 04, 06
 

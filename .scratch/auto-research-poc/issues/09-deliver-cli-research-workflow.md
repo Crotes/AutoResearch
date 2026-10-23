@@ -1,7 +1,8 @@
 # 交付 CLI 研究工作流
 
 Type: task
-Status: ready-for-agent
+Status: claimed
+Owner: Kimi
 Blocked by: 02, 03, 05, 07, 08
 
 ## 目标
@@ -24,3 +25,5 @@ Blocked by: 02, 03, 05, 07, 08
 - 失败来源和缺失正文不会被静默隐藏
 
 ## Comments
+
+- 2026-10-23：认领。PR #8 已合并，任务 08 转为 resolved。采用“前台执行到稳定检查点”的运行模型：`start`/`resume` 阻塞到审核闸门或终态，状态全部落 SQLite，下一次 CLI 调用从 SQLite 重建上下文；Pi Session 仅作执行上下文。决策记录见 ADR-0008。
