@@ -1,0 +1,13 @@
+{
+  "id": "exploration-v1",
+  "version": 1,
+  "workflow_version": "research-v1",
+  "name": "探索式研究（Exploration）",
+  "steps": [
+    { "id": "collect_sources", "artifact_kind": "overview", "gate": null, "checkpoint": null },
+    { "id": "select_sources", "artifact_kind": null, "gate": "source_selection", "checkpoint": "overviews_ready" },
+    { "id": "analyze_selected", "artifact_kind": "analysis", "gate": null, "checkpoint": null },
+    { "id": "approve_final", "artifact_kind": null, "gate": "final_approval", "checkpoint": "analyses_ready" },
+    { "id": "synthesize", "artifact_kind": "synthesis", "gate": null, "checkpoint": "completed" }
+  ]
+}

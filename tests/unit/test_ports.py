@@ -13,7 +13,12 @@ from autoresearch.domain import (
     SourceDocument,
     SourceRef,
 )
-from autoresearch.ports import ArtifactSubmissionPort, SourceAcquisition, WorkerRuntime
+from autoresearch.ports import (
+    ArtifactSubmissionPort,
+    RuntimeSnapshot,
+    SourceAcquisition,
+    WorkerRuntime,
+)
 
 
 class FakeRuntime:
@@ -27,6 +32,12 @@ class FakeRuntime:
         return None
 
     def resume(self, run_id: str) -> None:
+        return None
+
+    def restore(self, snapshot: RuntimeSnapshot) -> None:
+        return None
+
+    def wait_for_settlement(self, run_id: str, timeout: float) -> None:
         return None
 
     def inspect(self, run_id: str) -> ResearchRun:

@@ -1,18 +1,21 @@
 """Run the research-tools MCP server over stdio.
 
 Started as `python -m autoresearch.adapters.mcp` by an MCP host (e.g. Pi).
-The PoC wiring uses the in-memory adapters so the process is self-contained;
-production wiring replaces the ports without touching the protocol layer.
+By default the process wires itself to the production run described by the
+environment; `--demo` keeps the self-contained in-memory wiring.
 """
 
 from __future__ import annotations
 
+import argparse
 import sys
+from collections.abc import Sequence
 
 from autoresearch.adapters.fake import InMemoryArtifactStore, InMemorySourceAdapter
 from autoresearch.adapters.library import InMemoryLibrarySearch
 from autoresearch.adapters.mcp.server import ResearchToolsServer
 from autoresearch.adapters.mcp.tools import TOOL_DEFINITIONS, ToolContext
+from autoresearch.adapters.mcp.wiring import WiringError, build_production_server
 from autoresearch.domain.models import ResearchPlan, SourceKind
 
 
@@ -42,10 +45,32 @@ def _reconfigure_utf8(stream: object) -> None:
         reconfigure(encoding="utf-8")
 
 
-def main() -> int:
+def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="autoresearch.adapters.mcp",
+        description="Serve the research-tools MCP server over stdio.",
+    )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="use the self-contained in-memory demo wiring instead of the production environment",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parse_args(argv)
     _reconfigure_utf8(sys.stdin)
     _reconfigure_utf8(sys.stdout)
-    build_demo_server().serve(sys.stdin, sys.stdout)
+    if args.demo:
+        server = build_demo_server()
+    else:
+        try:
+            server = build_production_server()
+        except WiringError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 1
+    server.serve(sys.stdin, sys.stdout)
     return 0
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import sqlite3
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def migrate(connection: sqlite3.Connection) -> None:
@@ -124,4 +124,37 @@ def migrate(connection: sqlite3.Connection) -> None:
     connection.execute(
         "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)",
         (2, applied_at),
+    )
+    columns = {str(row[1]) for row in connection.execute("PRAGMA table_info(runs)").fetchall()}
+    if "skill_versions_json" not in columns:
+        connection.execute(
+            "ALTER TABLE runs ADD COLUMN skill_versions_json TEXT NOT NULL DEFAULT '{}'"
+        )
+    if "max_duration_seconds" not in columns:
+        connection.execute(
+            "ALTER TABLE runs ADD COLUMN max_duration_seconds INTEGER NOT NULL DEFAULT 1800"
+        )
+    if "max_candidates" not in columns:
+        connection.execute("ALTER TABLE runs ADD COLUMN max_candidates INTEGER NOT NULL DEFAULT 20")
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS domain_events (
+          id TEXT PRIMARY KEY, run_id TEXT NOT NULL REFERENCES runs(id),
+          sequence INTEGER NOT NULL, kind TEXT NOT NULL, occurred_at TEXT NOT NULL,
+          data_json TEXT NOT NULL, UNIQUE(run_id, sequence)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS run_source_versions (
+          run_id TEXT NOT NULL REFERENCES runs(id),
+          source_version_id TEXT NOT NULL REFERENCES source_versions(id),
+          PRIMARY KEY(run_id, source_version_id)
+        )
+        """
+    )
+    connection.execute(
+        "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)",
+        (3, applied_at),
     )

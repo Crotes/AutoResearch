@@ -21,7 +21,7 @@ INIT_PARAMS = {
 class StdioClient:
     def __init__(self) -> None:
         self._process = subprocess.Popen(
-            [sys.executable, "-m", "autoresearch.adapters.mcp"],
+            [sys.executable, "-m", "autoresearch.adapters.mcp", "--demo"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
