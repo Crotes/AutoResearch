@@ -36,4 +36,4 @@ Blocked by: 01, 02, 06
 - 审核决定只追加并带 `sequence`/`supersedes_id`；删除来源采用 tombstone，移除正文、分块和来源索引，并递归把直接引用及派生工件标记为 `stale`。搜索排除失效工件，失效工件也不能继续作为新工件依赖。
 - SQLite 连接允许 MCP 线程池进入，并由 Adapter 锁串行化同一连接的事务与查询；真实 `tools/call` 集成测试覆盖物化来源、提交工件和资料库检索。
 - 验证命令：`pytest --basetemp=.pytest-tmp`（201 passed）、`ruff check src tests`、`ruff format --check src tests`、`mypy src`。
-- PR：[#7](https://github.com/Crotes/AutoResearch/pull/7)。合并后再将状态更新为 `resolved`。
+- 原实现 PR：[#7](https://github.com/Crotes/AutoResearch/pull/7)；审查修复 PR：[#8](https://github.com/Crotes/AutoResearch/pull/8)。修复 PR 合并后再将状态更新为 `resolved`。
