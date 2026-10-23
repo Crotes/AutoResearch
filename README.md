@@ -13,8 +13,9 @@ AutoResearch 是一个面向实验室内部使用的 Skill-first 研究资料收
 - 六个版本化核心研究 Skills，包含输入/输出契约、样例、证据判定、最小 Tool 白名单和三个人工审核请求点
 - `SqliteResearchLibrary`：SQLite 事务、FTS5 工件检索、内容寻址正文、幂等工件版本、追加式审核和来源删除后的派生失效
 - 离线 Fake 纵向切片：不连网、不连模型即可跑通完整流程并导出工件
+- `ResearchWorkflow` + CLI：可跨进程恢复的完整研究流程（project/run 命令组、两道人工审核门、取消与导出；ADR-0008）
 
-尚未实现：完整 CLI（任务 09）和容器加固（任务 10）。任务全景见 `.scratch/auto-research-poc/issues/`。
+尚未实现：容器加固（任务 10）。任务全景见 `.scratch/auto-research-poc/issues/`。
 
 ## 快速开始
 
@@ -34,6 +35,34 @@ uv run autoresearch demo --output .autoresearch/demo-export
 ```
 
 导出包含 run.json、events.jsonl、manifest.json、来源正文与三层工件（速览/详细解读/分类总结）。可点击的工作流状态机原型位于 `.scratch/auto-research-poc/prototypes/workflow-state-machine.html`。
+
+### 真实 CLI 工作流
+
+CLI 采用「前台执行到稳定检查点」的运行模型（ADR-0008）：每次命令阻塞到审核闸门或终态，状态写入 SQLite，下一次命令从 SQLite 恢复并继续。数据默认写入 `.autoresearch/`（SQLite 与内容寻址正文），也可用 `--database` / `--content-root` 覆盖。
+
+```powershell
+# 1. 创建项目
+uv run autoresearch project create --name "Agent 自进化" --description "长期追踪"
+
+# 2. 启动运行（阻塞到选源闸门）
+uv run autoresearch run start --project <PROJECT_ID> --question "Agent 如何通过反馈实现自进化?" `
+  --include "self-improving agent" --source arxiv --source github --language zh --language en
+
+# 3. 查看状态与事件
+uv run autoresearch run status <RUN_ID>
+uv run autoresearch run events <RUN_ID>
+
+# 4. 人工选择成果后恢复（阻塞到终审闸门）
+uv run autoresearch run review <RUN_ID> --select <WORK_ID_1> --select <WORK_ID_2> --reviewer alice
+uv run autoresearch run resume <RUN_ID>
+
+# 5. 终审后恢复（完成）并导出
+uv run autoresearch run review <RUN_ID> --approve-final --reviewer alice --comment "证据充分"
+uv run autoresearch run resume <RUN_ID>
+uv run autoresearch run export <RUN_ID> --output .autoresearch/exports/<RUN_ID>
+```
+
+所有命令支持 `--json` 输出；退出码 `0` 成功、`2` 参数错误、`3` 不存在或非法状态转换、`4` 运行失败、`5` 配置或内部错误。
 
 ### 真实 Pi 运行（可选）
 

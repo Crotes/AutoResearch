@@ -8,10 +8,11 @@ as :class:`~autoresearch.domain.errors.AutoResearchError` failures.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import threading
 from collections import deque
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -47,12 +48,14 @@ class PiProcess:
         argv: Sequence[str],
         *,
         cwd: str | None = None,
+        env: Mapping[str, str] | None = None,
         on_record: Callable[[dict[str, Any]], None] | None = None,
         on_protocol_error: Callable[[AutoResearchError], None] | None = None,
         on_exit: Callable[[int | None], None] | None = None,
     ) -> None:
         self._argv = tuple(argv)
         self._cwd = cwd
+        self._env = None if env is None else {**os.environ, **env}
         self._on_record = on_record
         self._on_protocol_error = on_protocol_error
         self._on_exit = on_exit
@@ -70,6 +73,7 @@ class PiProcess:
             self._process = subprocess.Popen(
                 list(self._argv),
                 cwd=self._cwd,
+                env=self._env,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

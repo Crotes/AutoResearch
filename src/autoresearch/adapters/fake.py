@@ -28,6 +28,7 @@ from autoresearch.domain.models import (
     SourceRef,
     SourceVersion,
 )
+from autoresearch.ports.runtime import RuntimeSnapshot
 
 Clock = Callable[[], datetime]
 
@@ -189,6 +190,23 @@ class FakeRuntimeAdapter:
         self._collect_and_overview(run_id)
         return run_id
 
+    def restore(self, snapshot: RuntimeSnapshot) -> None:
+        run_id = snapshot.run.id
+        if run_id in self._runs:
+            raise ValueError(f"run already active: {run_id}")
+        self._runs[run_id] = snapshot.run
+        self._specs[run_id] = snapshot.spec
+        self._events[run_id] = list(snapshot.events)
+        self._documents[run_id] = {}
+        self._selected[run_id] = snapshot.selected_work_ids
+        if snapshot.final_approved:
+            self._final_approved.add(run_id)
+        for candidate in list(self.sources.discover(snapshot.spec.plan))[
+            : snapshot.spec.max_candidates
+        ]:
+            document = self.sources.materialize(candidate.source_ref)
+            self._documents[run_id][str(candidate.metadata["work_id"])] = document
+
     def events(self, run_id: str, cursor: int = 0) -> EventPage:
         events = self._require_events(run_id)
         if cursor < 0 or cursor > len(events):
@@ -221,6 +239,9 @@ class FakeRuntimeAdapter:
             return self._runs[run_id]
         except KeyError as error:
             raise KeyError(f"unknown run: {run_id}") from error
+
+    def wait_for_settlement(self, run_id: str, timeout: float) -> None:
+        self.inspect(run_id)
 
     def dispose(self, run_id: str) -> None:
         self._runs.pop(run_id, None)

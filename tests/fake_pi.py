@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 EVENT_DELAY = 0.02
@@ -150,6 +151,17 @@ class FakePi:
 def main() -> int:
     sys.stdin.reconfigure(encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")
+    dump_path = os.environ.get("FAKE_PI_ENV_DUMP")
+    if dump_path:
+        Path(dump_path).write_text(
+            json.dumps(
+                {
+                    "AUTORESEARCH_RUN_ID": os.environ.get("AUTORESEARCH_RUN_ID"),
+                    "PATH_present": bool(os.environ.get("PATH")),
+                }
+            ),
+            encoding="utf-8",
+        )
     scenario = os.environ.get("FAKE_PI_SCENARIO", "happy")
     fake = FakePi(scenario)
     for line in sys.stdin:

@@ -25,6 +25,7 @@ from autoresearch.application.artifacts import (
     ArtifactSubmissionValidator,
     JsonSchemaSkillOutputValidator,
 )
+from autoresearch.domain.events import DomainEvent, EventKind, EventPage
 from autoresearch.domain.library import (
     ArtifactValidity,
     ResearchProject,
@@ -41,6 +42,7 @@ from autoresearch.domain.models import (
     ArtifactSubmission,
     ResearchPlan,
     ResearchRun,
+    RunSpec,
     RunStatus,
     SourceDocument,
     SourceKind,
@@ -181,18 +183,28 @@ class SqliteResearchLibrary:
         return skill
 
     def save_run(
-        self, run: ResearchRun, skill_versions: Sequence[SkillVersion] = ()
+        self,
+        run: ResearchRun,
+        skill_versions: Sequence[SkillVersion] = (),
+        *,
+        max_duration_seconds: int = 1800,
+        max_candidates: int = 20,
     ) -> ResearchRun:
+        skill_versions_json = _json({skill.name: skill.version for skill in skill_versions})
         with self._transaction() as db:
             db.execute(
                 "INSERT INTO projects(id,name) VALUES (?,?) ON CONFLICT(id) DO NOTHING",
                 (run.project_id, run.project_id),
             )
             db.execute(
-                "INSERT INTO runs(id,project_id,status,plan_json,workflow_version,created_at,updated_at,checkpoint) "
-                "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status, "
+                "INSERT INTO runs(id,project_id,status,plan_json,workflow_version,created_at,updated_at,checkpoint,"
+                "skill_versions_json,max_duration_seconds,max_candidates) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status, "
                 "plan_json=excluded.plan_json, workflow_version=excluded.workflow_version, "
-                "updated_at=excluded.updated_at, checkpoint=excluded.checkpoint",
+                "updated_at=excluded.updated_at, checkpoint=excluded.checkpoint, "
+                "skill_versions_json=excluded.skill_versions_json, "
+                "max_duration_seconds=excluded.max_duration_seconds, "
+                "max_candidates=excluded.max_candidates",
                 (
                     run.id,
                     run.project_id,
@@ -202,6 +214,9 @@ class SqliteResearchLibrary:
                     _stamp(run.created_at),
                     _stamp(run.updated_at),
                     run.checkpoint,
+                    skill_versions_json,
+                    max_duration_seconds,
+                    max_candidates,
                 ),
             )
             for skill in skill_versions:
@@ -231,6 +246,45 @@ class SqliteResearchLibrary:
             created_at=_time(row["created_at"]),
             updated_at=_time(row["updated_at"]),
             checkpoint=row["checkpoint"],
+        )
+
+    def save_run_spec(self, spec: RunSpec, run_id: str) -> None:
+        with self._transaction() as db:
+            cursor = db.execute(
+                "UPDATE runs SET plan_json=?, workflow_version=?, skill_versions_json=?, "
+                "max_duration_seconds=?, max_candidates=? WHERE id=?",
+                (
+                    _plan_json(spec.plan),
+                    spec.workflow_version,
+                    _json(spec.skill_versions),
+                    spec.max_duration_seconds,
+                    spec.max_candidates,
+                    run_id,
+                ),
+            )
+            if cursor.rowcount == 0:
+                raise KeyError(f"unknown run: {run_id}")
+
+    def get_run_spec(self, run_id: str) -> RunSpec:
+        with self._lock:
+            row = self.connection.execute(
+                "SELECT project_id,plan_json,workflow_version,skill_versions_json,"
+                "max_duration_seconds,max_candidates FROM runs WHERE id=?",
+                (run_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown run: {run_id}")
+        skill_versions = {
+            str(name): str(version)
+            for name, version in json.loads(row["skill_versions_json"]).items()
+        }
+        return RunSpec(
+            project_id=row["project_id"],
+            plan=_plan_from_json(row["plan_json"]),
+            workflow_version=row["workflow_version"],
+            skill_versions=skill_versions,
+            max_duration_seconds=int(row["max_duration_seconds"]),
+            max_candidates=int(row["max_candidates"]),
         )
 
     def save_work(self, work: Work) -> Work:
@@ -542,6 +596,79 @@ class SqliteResearchLibrary:
         if row is None:
             raise KeyError(f"unknown artifact: {artifact_id}")
         return ArtifactValidity(row[0])
+
+    def list_artifacts(
+        self,
+        run_id: str,
+        *,
+        kind: ArtifactKind | None = None,
+        include_stale: bool = False,
+    ) -> tuple[Artifact, ...]:
+        query = "SELECT id FROM artifacts WHERE run_id=?"
+        params: list[object] = [run_id]
+        if kind is not None:
+            query += " AND kind=?"
+            params.append(str(kind))
+        if not include_stale:
+            query += " AND validity='valid'"
+        query += " ORDER BY created_at, version, id"
+        with self._lock:
+            rows = self.connection.execute(query, params).fetchall()
+            return tuple(self._artifact_by_id(self.connection, str(row[0])) for row in rows)
+
+    # -- run events and source links ----------------------------------------
+
+    def append_event(self, event: DomainEvent) -> None:
+        with self._transaction() as db:
+            db.execute(
+                "INSERT OR IGNORE INTO domain_events(id,run_id,sequence,kind,occurred_at,data_json) "
+                "VALUES (?,?,?,?,?,?)",
+                (
+                    event.id,
+                    event.run_id,
+                    event.sequence,
+                    str(event.kind),
+                    _stamp(event.occurred_at),
+                    _json(event.data),
+                ),
+            )
+
+    def list_events(self, run_id: str, cursor: int = 0) -> EventPage:
+        if cursor < 0:
+            raise ValueError("event cursor must be non-negative")
+        with self._lock:
+            rows = self.connection.execute(
+                "SELECT * FROM domain_events WHERE run_id=? AND sequence>=? ORDER BY sequence",
+                (run_id, cursor),
+            ).fetchall()
+        events = tuple(
+            DomainEvent(
+                id=row["id"],
+                run_id=row["run_id"],
+                sequence=int(row["sequence"]),
+                kind=EventKind(row["kind"]),
+                occurred_at=_time(row["occurred_at"]),
+                data=json.loads(row["data_json"]),
+            )
+            for row in rows
+        )
+        next_cursor = events[-1].sequence + 1 if events else cursor
+        return EventPage(events=events, next_cursor=next_cursor)
+
+    def save_run_source(self, run_id: str, source_version_id: str) -> None:
+        with self._transaction() as db:
+            db.execute(
+                "INSERT OR IGNORE INTO run_source_versions(run_id,source_version_id) VALUES (?,?)",
+                (run_id, source_version_id),
+            )
+
+    def list_run_sources(self, run_id: str) -> tuple[str, ...]:
+        with self._lock:
+            rows = self.connection.execute(
+                "SELECT source_version_id FROM run_source_versions WHERE run_id=? ORDER BY rowid",
+                (run_id,),
+            ).fetchall()
+        return tuple(str(row[0]) for row in rows)
 
     # -- search and source reads -------------------------------------------
 

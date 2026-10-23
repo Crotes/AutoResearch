@@ -23,6 +23,28 @@ SQLite 连接允许由 MCP 线程池进入，但 `SqliteResearchLibrary` 会以�
 
 若本机全局 Python 环境存在冲突，可直接使用项目虚拟环境中的可执行文件，例如 `.venv\Scripts\pytest.exe`。运行数据默认写入 `.autoresearch/`，该目录不进入 Git。来源连接器的 HTTP 响应缓存默认写入 `.autoresearch/cache/`（TTL 24 小时，命中即离线可用）。
 
+## CLI 工作流与恢复
+
+CLI 采用「前台执行到稳定检查点」的运行模型（ADR-0008）：`run start` 与 `run resume` 阻塞到审核闸门或终态，`ResearchWorkflow` 把状态、`RunSpec`、审核决定和领域事件写入 SQLite 后关闭 Pi 进程；下一次命令从 SQLite 重建运行上下文并恢复。Pi Session 只是执行上下文，不作为业务事实源。
+
+命令组：
+
+```text
+project create --name N [--description D]
+run start   --project ID --question Q --include T... [--exclude X...] [--source KIND...]
+            [--language L...] [--max-candidates N] [--max-duration S] [--seed-url URL...]
+run status  RUN_ID
+run events  RUN_ID [--cursor N]
+run review  RUN_ID (--select WORK_ID... | --approve-final | --reject-final) --reviewer R [--comment C]
+run resume  RUN_ID
+run cancel  RUN_ID
+run export  RUN_ID [--output PATH]
+```
+
+数据库与正文目录由全局 `--database PATH` 与 `--content-root PATH` 指定，默认分别取环境变量 `AUTORESEARCH_DATABASE` 与 `AUTORESEARCH_CONTENT_ROOT`；未设置时 SQLite 落在 `.autoresearch/research.sqlite3`，正文目录默认为 `<database>.content`。生产 MCP 子进程通过 `PiRuntimeAdapter` 注入同样的 `AUTORESEARCH_RUN_ID` / `AUTORESEARCH_DATABASE` / `AUTORESEARCH_CONTENT_ROOT` / `AUTORESEARCH_MODE=run` 环境变量取得运行上下文，缺失或 `MODE` 非 `run` 时明确失败、不降级到 Fake。
+
+所有命令支持 `--json` 输出；错误写 stderr 且不带 traceback。退出码：`0` 成功、`2` 参数错误、`3` 不存在或非法状态转换、`4` 研究运行失败（`FAILED`/`CANCELLED`）、`5` 配置或内部错误。恢复语义：`resume` 在未选源、未终审通过或已取消/完成后会拒绝执行；取消为终态，不可再恢复。
+
 ## 验证
 
 提交前执行完整检查：
